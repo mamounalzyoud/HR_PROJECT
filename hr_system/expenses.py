@@ -6,6 +6,7 @@ from flask import (
 from werkzeug.exceptions import abort
 from datetime import datetime
 import sqlite3
+import pytz # Ensure pytz is imported if you use datetime.now(pytz.utc)
 
 from hr_system.auth import login_required, manager_required
 from hr_system.db import get_db
@@ -22,7 +23,10 @@ def view_my_expenses():
     user_id = g.user['id']
     
     claims = db.execute(
-        '''SELECT e.*, a.full_name as approver_name 
+        '''SELECT e.id, e.expense_date, e.category, e.amount, e.currency, e.description, e.status,
+                  strftime('%Y-%m-%d %H:%M:%S', e.submitted_at) as submitted_at_utc_str, 
+                  strftime('%Y-%m-%d %H:%M:%S', e.approved_at) as approved_at_utc_str, 
+                  a.full_name as approver_name 
            FROM expenses e 
            LEFT JOIN users a ON e.approved_by_user_id = a.id
            WHERE e.user_id = ? 
@@ -58,6 +62,7 @@ def submit_expense():
         else:
             db = get_db()
             try:
+                # submitted_at is handled by DEFAULT CURRENT_TIMESTAMP which is UTC in SQLite
                 db.execute(
                     '''INSERT INTO expenses 
                        (user_id, expense_date, category, amount, currency, description, status)
@@ -71,7 +76,6 @@ def submit_expense():
                 flash(f"Database error submitting expense: {e}", "error")
                 db.rollback()
 
-    # Common expense categories - can be moved to config or DB later
     categories = ['Travel', 'Meals', 'Supplies', 'Training', 'Client Entertainment', 'Other']
     return render_template('expenses/new_expense.html', categories=categories)
 
@@ -85,18 +89,22 @@ def manage_expenses():
     manager_user = g.user
     
     claims_to_manage = []
-    # Admins see all pending claims
     if manager_user['role'] == 'admin':
         claims_to_manage = db.execute(
-            '''SELECT e.*, u.full_name as employee_name, u.department 
+            '''SELECT e.id, e.user_id, e.expense_date, e.category, e.amount, e.currency, e.description, e.status,
+                      strftime('%Y-%m-%d %H:%M:%S', e.submitted_at) as submitted_at_utc_str, 
+                      strftime('%Y-%m-%d %H:%M:%S', e.approved_at) as approved_at_utc_str, 
+                      u.full_name as employee_name, u.department 
                FROM expenses e JOIN users u ON e.user_id = u.id 
                WHERE e.status = 'Pending' 
                ORDER BY e.submitted_at ASC'''
         ).fetchall()
-    # Managers see pending claims from their direct reports
     elif manager_user['role'] == 'manager':
         claims_to_manage = db.execute(
-            '''SELECT e.*, u.full_name as employee_name, u.department 
+            '''SELECT e.id, e.user_id, e.expense_date, e.category, e.amount, e.currency, e.description, e.status,
+                      strftime('%Y-%m-%d %H:%M:%S', e.submitted_at) as submitted_at_utc_str, 
+                      strftime('%Y-%m-%d %H:%M:%S', e.approved_at) as approved_at_utc_str, 
+                      u.full_name as employee_name, u.department 
                FROM expenses e JOIN users u ON e.user_id = u.id 
                WHERE u.manager_id = ? AND e.status = 'Pending' 
                ORDER BY e.submitted_at ASC''',
@@ -109,11 +117,10 @@ def manage_expenses():
 @manager_required
 def expense_action(claim_id):
     """Approve or reject an expense claim."""
-    action = request.form.get('action') # 'approve' or 'reject'
+    action = request.form.get('action') 
     db = get_db()
     manager_user = g.user
     
-    # Fetch claim details including submitter's manager for authorization
     claim = db.execute(
         'SELECT e.*, u.manager_id FROM expenses e JOIN users u ON e.user_id = u.id WHERE e.id = ?',
         (claim_id,)
@@ -123,7 +130,6 @@ def expense_action(claim_id):
         flash('Expense claim not found.', 'error')
         return redirect(url_for('expenses.manage_expenses'))
         
-    # Authorization: Admin or direct manager can action
     is_authorized = False
     if manager_user['role'] == 'admin':
         is_authorized = True
@@ -134,19 +140,19 @@ def expense_action(claim_id):
         flash('You are not authorized to manage this expense claim.', 'error')
         return redirect(url_for('expenses.manage_expenses'))
         
-    # Prevent actioning non-pending claims
     if claim['status'] != 'Pending':
          flash(f'This claim has already been {claim["status"].lower()}.', 'warning')
          return redirect(url_for('expenses.manage_expenses'))
 
     if action in ['approve', 'reject']:
         new_status = 'Approved' if action == 'approve' else 'Rejected'
-        approved_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S') if new_status == 'Approved' else None
+        # Ensure approved_at is UTC. Using pytz.utc is more explicit.
+        approved_at_utc_str = datetime.now(pytz.utc).strftime('%Y-%m-%d %H:%M:%S') if new_status == 'Approved' else None
         
         try:
             db.execute(
                 'UPDATE expenses SET status = ?, approved_by_user_id = ?, approved_at = ? WHERE id = ?',
-                (new_status, manager_user['id'], approved_at, claim_id)
+                (new_status, manager_user['id'], approved_at_utc_str, claim_id)
             )
             db.commit()
             flash(f'Expense claim has been {new_status.lower()}.', 'success')
@@ -157,4 +163,3 @@ def expense_action(claim_id):
         flash('Invalid action specified.', 'error')
         
     return redirect(url_for('expenses.manage_expenses'))
-

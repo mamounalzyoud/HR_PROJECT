@@ -6,6 +6,7 @@ from flask import (
 from werkzeug.exceptions import abort
 from datetime import datetime
 import sqlite3
+import pytz # Ensure pytz is imported
 
 from hr_system.auth import login_required, manager_required
 from hr_system.db import get_db
@@ -22,9 +23,13 @@ def my_reviews():
     employee_id = g.user['id']
     
     reviews = db.execute(
-        '''SELECT pr.*, m.full_name as manager_name 
+        '''SELECT pr.id, pr.employee_user_id, pr.manager_user_id, 
+                  pr.review_period_start, pr.review_period_end, 
+                  strftime('%Y-%m-%d %H:%M:%S', pr.review_date) as review_date_utc_str, 
+                  pr.overall_rating, pr.manager_comments, pr.employee_comments, pr.status,
+                  m.full_name as manager_name 
            FROM performance_reviews pr
-           LEFT JOIN users m ON pr.manager_user_id = m.id -- Use LEFT JOIN in case manager was deleted
+           LEFT JOIN users m ON pr.manager_user_id = m.id
            WHERE pr.employee_user_id = ? 
            ORDER BY pr.review_period_end DESC''',
         (employee_id,)
@@ -41,28 +46,27 @@ def manage_performance():
     db = get_db()
     manager_id = g.user['id']
     
-    # Find direct reports
     direct_reports = db.execute(
         'SELECT id, full_name, department FROM users WHERE manager_id = ? ORDER BY full_name',
         (manager_id,)
     ).fetchall()
     
-    # --- ADDED: Fetch reviews created BY this manager ---
     submitted_reviews = db.execute(
-        '''SELECT pr.*, e.full_name as employee_name 
+        '''SELECT pr.id, pr.employee_user_id, 
+                  strftime('%Y-%m-%d %H:%M:%S', pr.review_date) as review_date_utc_str, 
+                  pr.review_period_start, pr.review_period_end, pr.overall_rating, pr.status,
+                  e.full_name as employee_name 
            FROM performance_reviews pr 
            JOIN users e ON pr.employee_user_id = e.id 
            WHERE pr.manager_user_id = ? 
            ORDER BY pr.review_date DESC''',
         (manager_id,)
     ).fetchall()
-    # --- END ADDED ---
     
-    # Pass both lists to the template
     return render_template(
         'performance/manage_reviews.html', 
         reports=direct_reports, 
-        submitted_reviews=submitted_reviews # Pass the submitted reviews
+        submitted_reviews=submitted_reviews
         )
 
 @bp.route('/review/new/<int:employee_id>', methods=('GET', 'POST'))
@@ -72,7 +76,6 @@ def create_review(employee_id):
     db = get_db()
     manager_id = g.user['id']
     
-    # Verify the employee reports to this manager
     employee = db.execute(
         'SELECT id, full_name FROM users WHERE id = ? AND manager_id = ?',
         (employee_id, manager_id)
@@ -85,10 +88,9 @@ def create_review(employee_id):
     if request.method == 'POST':
         start_date = request.form.get('review_period_start')
         end_date = request.form.get('review_period_end')
-        rating = request.form.get('overall_rating') # Get as string first
+        rating = request.form.get('overall_rating')
         manager_comments = request.form.get('manager_comments')
         
-        # Convert rating to int, handle empty string
         rating_int = None
         if rating:
             try:
@@ -109,6 +111,7 @@ def create_review(employee_id):
             flash(error, 'error')
         else:
             try:
+                # review_date is handled by DEFAULT CURRENT_TIMESTAMP (UTC in SQLite)
                 db.execute(
                     '''INSERT INTO performance_reviews 
                        (employee_user_id, manager_user_id, review_period_start, review_period_end, 
@@ -123,7 +126,6 @@ def create_review(employee_id):
                  flash(f"Database error creating review: {e}", "error")
                  db.rollback()
 
-    # For GET request
     return render_template('performance/create_review.html', employee=employee)
 
 
@@ -136,10 +138,14 @@ def view_review(review_id):
     user_role = g.user['role']
     
     review = db.execute(
-        '''SELECT pr.*, e.full_name as employee_name, m.full_name as manager_name 
+        '''SELECT pr.id, pr.employee_user_id, pr.manager_user_id, 
+                  pr.review_period_start, pr.review_period_end, 
+                  strftime('%Y-%m-%d %H:%M:%S', pr.review_date) as review_date_utc_str, 
+                  pr.overall_rating, pr.manager_comments, pr.employee_comments, pr.status,
+                  e.full_name as employee_name, m.full_name as manager_name 
            FROM performance_reviews pr 
            JOIN users e ON pr.employee_user_id = e.id 
-           LEFT JOIN users m ON pr.manager_user_id = m.id -- LEFT JOIN in case manager deleted
+           LEFT JOIN users m ON pr.manager_user_id = m.id
            WHERE pr.id = ?''',
         (review_id,)
     ).fetchone()
@@ -151,21 +157,17 @@ def view_review(review_id):
         else:
             return redirect(url_for('performance.my_reviews'))
 
-    # Authorization check
     is_authorized = False
     if user_role == 'admin':
         is_authorized = True
     elif review['employee_user_id'] == user_id: 
         is_authorized = True
-    # Check if the logged-in user is the manager who conducted the review
     elif user_role == 'manager' and review['manager_user_id'] == user_id: 
          is_authorized = True
-    # Check if the logged-in user is the current manager of the employee (even if they didn't write the review)
     elif user_role == 'manager':
          current_manager = db.execute("SELECT manager_id FROM users WHERE id = ?", (review['employee_user_id'],)).fetchone()
          if current_manager and current_manager['manager_id'] == user_id:
              is_authorized = True
-
 
     if not is_authorized:
         flash('You are not authorized to view this review.', 'error')
@@ -175,5 +177,3 @@ def view_review(review_id):
             return redirect(url_for('performance.my_reviews'))
 
     return render_template('performance/view_review.html', review=review)
-
-# TODO: Add routes for editing reviews 

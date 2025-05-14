@@ -2,9 +2,148 @@
 
 {% block title %}Dashboard{% endblock %}
 
+{% block head %}
+{{ super() }}
+<style>
+    /* Dashboard Specific Styles - Refined for a cleaner 2025 look */
+    .greeting-banner {
+        font-size: 1.6rem; /* Slightly larger greeting */
+        font-weight: 300;
+        color: #495057;
+        margin-bottom: 0.25rem; /* Tighter spacing below greeting */
+    }
+    .greeting-banner strong {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .dashboard-header {
+        margin-bottom: 1.5rem; /* Reduced margin below header row */
+    }
+
+    /* Quick Actions Panel - Refined */
+    .quick-actions-panel {
+        background-color: #ffffff;
+        border-radius: 0.6rem; /* More rounded */
+        padding: 1.5rem;
+        /* box-shadow: 0 4px 12px rgba(0,0,0,.05); Softer, more diffused shadow */
+        margin-bottom: 2rem;
+        border: 1px solid #e9ecef;
+    }
+    .quick-actions-panel h5 {
+        color: #343a40;
+        margin-bottom: 1.25rem;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    .quick-actions-grid {
+        display: grid;
+        /* More responsive columns: 2 on small, up to 4 on larger */
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 1rem;
+    }
+    .quick-action-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem 0.75rem; /* More padding inside button */
+        border-radius: 0.5rem; /* Consistent rounding */
+        text-decoration: none;
+        color: #495057;
+        background-color: #f8f9fa;
+        border: 1px solid #e0e0e0; /* Slightly more defined border */
+        transition: all 0.2s ease-in-out;
+        text-align: center;
+        font-size: 0.875rem; /* Slightly smaller text for compactness */
+        font-weight: 500;
+        min-height: 110px; 
+    }
+    .quick-action-btn:hover {
+        background-color: #5dade2; /* Use primary accent on hover */
+        color: #ffffff;
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(93, 173, 226, 0.2);
+        border-color: #5dade2;
+    }
+    .quick-action-btn:hover i {
+        color: #ffffff; /* Icon color changes with button text */
+    }
+    .quick-action-btn i {
+        font-size: 1.85rem; /* Slightly larger icons */
+        margin-bottom: 0.6rem;
+        color: #5dade2; /* Default icon color - primary accent */
+        transition: color 0.2s ease-in-out;
+    }
+
+    /* Stat Cards - Refined */
+    .stat-card { /* Already has some base styling from base.html, we can override or extend */
+        border-radius: 0.6rem; /* More rounded */
+        /* box-shadow: 0 4px 12px rgba(0,0,0,.05); */
+        /* border-left-width: 5px; */ /* Slightly thicker accent border */
+    }
+    .stat-card .card-body {
+        padding: 1.25rem;
+    }
+    .stat-card .stat-title {
+        font-size: 0.8rem;
+        font-weight: 500; /* Less bold title */
+        color: #6c757d;
+        margin-bottom: 0.35rem;
+    }
+    .stat-card .stat-value {
+        font-size: 2rem; /* Larger value */
+        font-weight: 600; /* Bolder value */
+        line-height: 1.2;
+    }
+    .stat-card .stat-value span { /* For units like "Days", "Tasks" */
+        font-size: 0.85rem;
+        font-weight: 400;
+        color: #6c757d;
+        margin-left: 0.25rem;
+    }
+    .stat-card .text-muted { /* For "Since: ..." text */
+        font-size: 0.8rem;
+    }
+    .stat-card .opacity-50 { /* Make icons a bit more prominent */
+        opacity: 0.65 !important;
+    }
+
+    /* Content Cards (Recent Attendance, Leaves etc.) */
+    .content-card .card-header {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+    .content-card .card-header h5 {
+        font-size: 1.05rem;
+        font-weight: 600;
+    }
+    .content-card .card-body {
+        padding: 1.25rem;
+        font-size: 0.9rem;
+    }
+    .content-card .list-group-item {
+        padding-left: 0;
+        padding-right: 0;
+        border-color: #f1f3f5; /* Very light border for list items */
+    }
+    .content-card dl.row dt { /* Definition list term (label) */
+        font-weight: 500;
+        color: #495057;
+    }
+     .content-card dl.row dd { /* Definition list description (value) */
+        color: #212529;
+    }
+
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-0 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Dashboard</h1>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-0 pb-2 dashboard-header">
+    <div>
+        <h1 class="h2">Dashboard</h1>
+        <p class="greeting-banner" id="timeBasedGreeting">Loading greeting...</p>
+    </div>
     <div class="btn-toolbar mb-2 mb-md-0">
         {% if is_clocked_in %}
             <form action="{{ url_for('attendance.clock_out') }}" method="post" class="me-2">
@@ -22,16 +161,32 @@
     </div>
 </div>
 
-<div class="row g-3 mb-3">
-    <div class="col-md-6 col-lg-3">
-        <div class="card stat-card border-primary">
+{# Quick Actions Panel #}
+{% if quick_actions %}
+<div class="quick-actions-panel">
+    <h5><i class="fas fa-bolt me-2 text-primary"></i>Quick Actions</h5>
+    <div class="quick-actions-grid">
+        {% for action in quick_actions %}
+        <a href="{{ action.url }}" class="quick-action-btn">
+            <i class="fas {{ action.icon }}"></i>
+            <span>{{ action.label }}</span>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+
+<div class="row g-4 mb-4"> {# Increased gap for stat cards #}
+    <div class="col-md-6 col-xl-3"> {# Adjusted columns for better responsiveness on xl screens #}
+        <div class="card stat-card border-primary h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="stat-title text-primary">Clock Status</div>
                         <div class="stat-value" id="clockStatusValue">{{ 'Clocked In' if is_clocked_in else 'Clocked Out' }}</div>
                         <small class="text-muted" id="clockInTimeDetail">
-                            {% if is_clocked_in and clock_in_time %} {# clock_in_time is already localized from main.py #}
+                            {% if is_clocked_in and clock_in_time %}
                                 Since: {{ clock_in_time }} 
                                 {% if hours_since_clock_in is not none %}
                                     ({{ '%.1f' | format(hours_since_clock_in) }}h)
@@ -48,28 +203,29 @@
             </div>
         </div>
     </div>
-    <div class="col-md-6 col-lg-3">
-        <div class="card stat-card border-info">
+    <div class="col-md-6 col-xl-3">
+        <div class="card stat-card border-info h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="stat-title text-info">Vacation Balance</div>
-                        <div class="stat-value text-info">{{ '%.1f' | format(leave_balance) }} <span style="font-size: 0.9rem; font-weight: normal;">Days</span></div>
-                        <small class="text-muted">&nbsp;</small> </div>
+                        <div class="stat-value text-info">{{ '%.1f' | format(leave_balance) }}<span>Days</span></div>
+                        <small class="text-muted">&nbsp;</small> 
+                    </div>
                     <i class="fas fa-umbrella-beach fa-3x text-info opacity-50"></i>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-6 col-lg-3">
-        <div class="card stat-card border-warning">
+    <div class="col-md-6 col-xl-3">
+        <div class="card stat-card border-warning h-100">
             <div class="card-body">
                  <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="stat-title text-warning">Pending Onboarding</div>
-                        <div class="stat-value text-warning">{{ pending_onboarding_tasks_count }} <span style="font-size: 0.9rem; font-weight: normal;">Tasks</span></div>
+                        <div class="stat-value text-warning">{{ pending_onboarding_tasks_count }}<span>Tasks</span></div>
                         {% if pending_onboarding_tasks_count > 0 %}
-                            <a href="{{ url_for('onboarding.index') }}" class="text-warning small">View Tasks</a>
+                            <a href="{{ url_for('onboarding.index') }}" class="text-warning small stretched-link">View Tasks</a>
                         {% else %}
                              <small class="text-muted">&nbsp;</small>
                         {% endif %}
@@ -79,8 +235,8 @@
             </div>
         </div>
     </div>
-    <div class="col-md-6 col-lg-3">
-        <div class="card stat-card border-success">
+    <div class="col-md-6 col-xl-3">
+        <div class="card stat-card border-success h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -98,24 +254,22 @@
 
 <div class="row g-4">
     <div class="col-lg-7">
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-calendar-day me-2"></i>Recent Attendance</h5>
+        <div class="card shadow-sm mb-4 content-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-calendar-day me-2 text-primary"></i>Recent Attendance</h5>
                 <a href="{{ url_for('attendance.view_attendance') }}" class="btn btn-sm btn-outline-secondary py-0">View All</a>
             </div>
             <div class="card-body">
                 {% if recent_attendance %}
                     <dl class="row mb-0">
                         <dt class="col-sm-3">Date:</dt>
-                        <dd class="col-sm-9">{{ recent_attendance.date }}</dd> {# Date-only #}
-
+                        <dd class="col-sm-9">{{ recent_attendance.date }}</dd> 
                         <dt class="col-sm-3">Status:</dt>
                         <dd class="col-sm-9">
                             <span class="badge bg-{{ 'success' if recent_attendance.status == 'present' else ('danger' if recent_attendance.status == 'absent' else 'info') }}">
                                 {{ recent_attendance.status | title }}
                             </span>
                         </dd>
-
                         {% if recent_attendance.status == 'present' and recent_attendance.hours_worked is not none %}
                         <dt class="col-sm-3">Hours:</dt>
                         <dd class="col-sm-9">{{ '%.2f' | format(recent_attendance.hours_worked) }} hrs</dd>
@@ -127,9 +281,9 @@
             </div>
         </div>
 
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-plane-circle-check me-2"></i>My Leave Requests</h5>
+        <div class="card shadow-sm mb-4 content-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-plane-circle-check me-2 text-info"></i>My Leave Requests</h5>
                 <a href="{{ url_for('leaves.view_leaves') }}" class="btn btn-sm btn-outline-secondary py-0">View/Request</a>
             </div>
             <div class="card-body">
@@ -137,32 +291,34 @@
                      <dl class="row mb-0">
                         <dt class="col-sm-3">Type:</dt>
                         <dd class="col-sm-9">{{ recent_leave_request.leave_type | title }}</dd>
-
                         <dt class="col-sm-3">Dates:</dt>
-                        <dd class="col-sm-9">{{ recent_leave_request.start_date }} to {{ recent_leave_request.end_date }}</dd> {# Date-only #}
-
+                        <dd class="col-sm-9">{{ recent_leave_request.start_date }} to {{ recent_leave_request.end_date }}</dd> 
                         <dt class="col-sm-3">Status:</dt>
                         <dd class="col-sm-9">
                              <span class="badge bg-{{ 'success' if recent_leave_request.status == 'approved' else ('warning text-dark' if recent_leave_request.status == 'pending' else ('danger' if recent_leave_request.status == 'rejected' else 'secondary')) }}">
                                 {{ recent_leave_request.status | title }}
                             </span>
                         </dd>
+                        {% if recent_leave_request.created_at_utc_str %}
+                        <dt class="col-sm-3 text-muted"><small>Submitted:</small></dt>
+                        <dd class="col-sm-9 text-muted"><small>{{ recent_leave_request.created_at_utc_str | localdatetime(format_str='%b %d, %Y') }}</small></dd>
+                        {% endif %}
                     </dl>
                 {% else %}
                     <p class="text-muted">No recent leave requests.</p>
                 {% endif %}
             </div>
         </div>
-         <div class="card shadow-sm mb-4">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-hand-holding-medical me-2"></i>My Benefits</h5>
+         <div class="card shadow-sm mb-4 content-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-hand-holding-medical me-2 text-success"></i>My Benefits</h5>
                 <a href="{{ url_for('benefits.view_benefits') }}" class="btn btn-sm btn-outline-secondary py-0">View All</a>
             </div>
             <div class="card-body">
                  {% if active_benefits %}
                     <ul class="list-group list-group-flush">
                     {% for benefit in active_benefits %}
-                        <li class="list-group-item px-0">{{ benefit.benefit_type | title }} {% if benefit.details %}- {{ benefit.details }}{% endif %}</li>
+                        <li class="list-group-item">{{ benefit.benefit_type | title }} {% if benefit.details %}- <span class="text-muted">{{ benefit.details }}</span>{% endif %}</li>
                     {% endfor %}
                     </ul>
                 {% else %}
@@ -170,25 +326,23 @@
                 {% endif %}
             </div>
         </div>
-
-
     </div>
 
     <div class="col-lg-5">
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-bullhorn me-2"></i>Recent Announcements</h5>
+        <div class="card shadow-sm mb-4 content-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-bullhorn me-2 text-warning"></i>Recent Announcements</h5>
                  <a href="{{ url_for('announcements.view_announcements') }}" class="btn btn-sm btn-outline-secondary py-0">View All</a>
             </div>
             <div class="card-body">
                 {% if recent_announcements %}
-                    {% for announcement in recent_announcements %} {# Assuming recent_announcements is recent_announcements_raw from main.py #}
-                        <div class="mb-3 pb-2 {% if not loop.last %}border-bottom{% endif %}">
+                    {% for announcement in recent_announcements %}
+                        <div class="mb-3 pb-2 {% if not loop.last %}border-bottom border-light{% endif %}">
                             <h6>{{ announcement.title }}</h6>
                             <p class="small text-muted mb-1">{{ announcement.content[:100] }}{% if announcement.content|length > 100 %}...{% endif %}</p>
                                 <small class="text-muted fst-italic">Posted: 
                                     {% if announcement.created_at_utc_str %}
-                                        {{ announcement.created_at_utc_str | localdatetime(format_str='%Y-%m-%d') }}
+                                        {{ announcement.created_at_utc_str | localdatetime(format_str='%b %d, %Y') }}
                                     {% else %}
                                         N/A
                                     {% endif %}
@@ -202,16 +356,16 @@
         </div>
 
         {% if g.user.role in ['manager', 'admin'] %}
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-users me-2"></i>Team Overview</h5>
+        <div class="card shadow-sm mb-4 content-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-users me-2 text-info"></i>Team Overview</h5>
                 <a href="{{ url_for('attendance.team_attendance') }}" class="btn btn-sm btn-outline-secondary py-0">Team Attendance</a>
             </div>
             <div class="card-body">
                 {% if team_members %}
                     <ul class="list-group list-group-flush">
-                        {% for member in team_members[:5] %} {# Limit to 5 for dashboard view #}
-                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        {% for member in team_members[:5] %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
                                 <strong>{{ member.full_name }}</strong>
                                 <small class="d-block text-muted">{{ member.role | title }} - {{ member.department or 'N/A' }}</small>
@@ -222,7 +376,7 @@
                         </li>
                         {% endfor %}
                         {% if team_members|length > 5 %}
-                         <li class="list-group-item text-center px-0 pt-2">
+                         <li class="list-group-item text-center pt-2">
                             <small><a href="{{ url_for('users.view_users') if g.user.role == 'admin' else url_for('attendance.team_attendance') }}">View all team members...</a></small>
                          </li>
                         {% endif %}
@@ -233,18 +387,21 @@
             </div>
         </div>
 
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-user-clock me-2"></i>Pending Team Leaves</h5>
+        <div class="card shadow-sm mb-4 content-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-user-clock me-2 text-danger"></i>Pending Team Leaves</h5>
                 <a href="{{ url_for('leaves.manage_leaves') }}" class="btn btn-sm btn-outline-secondary py-0">Manage All</a>
             </div>
             <div class="card-body">
                 {% if pending_team_leaves %}
                      <ul class="list-group list-group-flush">
                         {% for leave in pending_team_leaves %}
-                        <li class="list-group-item px-0">
+                        <li class="list-group-item">
                             <strong>{{ leave.employee_name }}</strong> ({{ leave.leave_type | title }})
-                            <small class="d-block text-muted">{{ leave.start_date }} to {{ leave.end_date }}</small> {# Date-only #}
+                            <small class="d-block text-muted">{{ leave.start_date }} to {{ leave.end_date }}</small>
+                            {% if leave.created_at_utc_str %}
+                            <small class="d-block text-muted fst-italic">Submitted: {{ leave.created_at_utc_str | localdatetime(format_str='%b %d, %Y') }}</small>
+                            {% endif %}
                         </li>
                         {% endfor %}
                     </ul>
@@ -253,7 +410,7 @@
                 {% endif %}
             </div>
         </div>
-        {% endif %} {# End manager/admin specific cards #}
+        {% endif %} 
     </div>
 </div>
 {% endblock %}
@@ -261,8 +418,25 @@
 {% block scripts %}
 {{ super() }}
 <script>
-// Script for updating clock status (from dashboard_clock_status_api)
 document.addEventListener('DOMContentLoaded', function() {
+    // Time-based greeting
+    const greetingElement = document.getElementById('timeBasedGreeting');
+    if (greetingElement && currentUser) { // Check if currentUser is available
+        const currentHour = new Date().getHours(); 
+        let greetingText = '';
+        if (currentHour < 12) {
+            greetingText = 'Good morning';
+        } else if (currentHour < 18) {
+            greetingText = 'Good afternoon';
+        } else {
+            greetingText = 'Good evening';
+        }
+        // Assuming g.user.full_name is correctly passed if currentUser exists
+        greetingElement.innerHTML = `${greetingText}, <strong>{{ g.user.full_name if g.user else 'User' }}</strong>!`;
+    } else if (greetingElement) {
+        greetingElement.innerHTML = `Welcome!`; // Fallback if no user
+    }
+
     const clockStatusValue = document.getElementById('clockStatusValue');
     const clockInTimeDetail = document.getElementById('clockInTimeDetail');
 
@@ -274,18 +448,31 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.is_clocked_in) {
                     clockStatusValue.textContent = 'Clocked In';
-                    if (data.clock_in_time) { // This is UTC string from API
+                    if (data.clock_in_time) { 
                         try {
-                            // Convert UTC string from API to local display for dynamic updates
-                            const clockInUTCStr = data.clock_in_time;
-                            // Add 'Z' to indicate UTC if not already in ISO 8601 format with Z or offset
-                            const clockInDate = new Date(clockInUTCStr.includes('Z') || clockInUTCStr.includes('+') ? clockInUTCStr : clockInUTCStr.replace(' ', 'T') + 'Z');
-                            const now = new Date();
-                            const hours = (now - clockInDate) / (1000 * 60 * 60);
-                            clockInTimeDetail.innerHTML = `Since: ${clockInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (${hours.toFixed(1)}h)`;
+                            let displayTime;
+                            let hoursDiffText = '';
+                            // Use global formatDate if available from base.html
+                            if (typeof formatDate === "function") { 
+                                displayTime = formatDate(data.clock_in_time).split(',').pop().trim();
+                            } else { // Fallback if formatDate is not defined in this scope
+                                const clockInDate = new Date(data.clock_in_time.replace(' ', 'T') + 'Z');
+                                displayTime = clockInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            }
+                            
+                            const clockInAwareUtc = new Date(data.clock_in_time.replace(' ', 'T') + 'Z');
+                            // Get current time also as UTC for correct diff calculation
+                            const nowLocalDate = new Date();
+                            const nowAwareUtc = new Date(Date.UTC(nowLocalDate.getUTCFullYear(), nowLocalDate.getUTCMonth(), nowLocalDate.getUTCDate(), nowLocalDate.getUTCHours(), nowLocalDate.getUTCMinutes(), nowLocalDate.getUTCSeconds()));
+
+                            const durationMs = nowAwareUtc.getTime() - clockInAwareUtc.getTime();
+                            const hours = durationMs / (1000 * 60 * 60);
+                            hoursDiffText = ` (${hours.toFixed(1)}h)`;
+
+                            clockInTimeDetail.innerHTML = `Since: ${displayTime}${hoursDiffText}`;
                         } catch (e) {
                             clockInTimeDetail.textContent = "Since: Error parsing time";
-                             console.error("Error parsing clock_in_time from API:", data.clock_in_time, e);
+                            console.error("Error parsing clock_in_time from API:", data.clock_in_time, e);
                         }
                     } else {
                         clockInTimeDetail.textContent = "Since: N/A";
@@ -297,15 +484,13 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error fetching clock status:', error);
-                clockStatusValue.textContent = 'Error';
-                clockInTimeDetail.innerHTML = '&nbsp;';
+                if(clockStatusValue) clockStatusValue.textContent = 'Error';
+                if(clockInTimeDetail) clockInTimeDetail.innerHTML = '&nbsp;';
             });
     }
 
-    if (clockStatusValue && clockInTimeDetail) { 
-        // Initial update is handled by server-side rendering.
-        // This JS is for dynamic updates if the page stays open.
-        // updateClockStatusDisplay(); // Call once if initial state might be different from SSR
+    if (currentUser && clockStatusValue && clockInTimeDetail) { // Check currentUser
+        updateClockStatusDisplay(); 
         setInterval(updateClockStatusDisplay, 30000); 
     }
 });

@@ -7,12 +7,11 @@ from werkzeug.exceptions import abort
 from werkzeug.security import check_password_hash, generate_password_hash
 import sqlite3
 from datetime import datetime, date, timedelta
-import pytz # Import pytz
+import pytz 
 
 from hr_system.auth import login_required
 from hr_system.db import get_db
 from hr_system.onboarding import trigger_pending_task_reminders
-# Assuming you have utils.py with format_datetime_user_timezone
 from hr_system.utils import format_datetime_user_timezone
 
 
@@ -29,7 +28,7 @@ def dashboard():
     db = get_db()
     user_id = g.user['id']
     user_role = g.user['role']
-    user_timezone_str = g.user_timezone # This should be set by auth.py
+    # user_timezone_str = g.user_timezone # This is set by auth.py
 
     try:
         trigger_pending_task_reminders(db, user_id)
@@ -38,34 +37,23 @@ def dashboard():
         current_app.logger.error(f"Error triggering proactive reminders from dashboard for user {user_id}: {e_reminder}")
 
     active_clock_entry = db.execute(
-        # Fetch clock_in as a string to handle it consistently
         "SELECT id, strftime('%Y-%m-%d %H:%M:%S', clock_in) as clock_in_utc_str FROM time_clock WHERE user_id = ? AND status = ? ORDER BY clock_in DESC LIMIT 1",
         (user_id, 'active')
     ).fetchone()
     
     is_clocked_in = active_clock_entry is not None
-    clock_in_display_time_str = None # This will be in user's local time
+    clock_in_display_time_str = None 
     hours_since_clock_in = None
 
     if is_clocked_in:
         clock_in_utc_str = active_clock_entry['clock_in_utc_str']
         try:
-            # Convert stored UTC string to user's local time for display
-            # The format_datetime_user_timezone expects a string, which clock_in_utc_str is.
-            # It will use g.user_timezone internally if the second arg is None.
             clock_in_display_time_str = format_datetime_user_timezone(clock_in_utc_str, None, '%I:%M %p')
-
-            # For duration calculation:
-            # 1. Parse the stored UTC string into a naive datetime object.
             clock_in_naive_dt = datetime.strptime(clock_in_utc_str, '%Y-%m-%d %H:%M:%S')
-            # 2. Make it timezone-aware by localizing it to UTC.
             clock_in_aware_utc = pytz.utc.localize(clock_in_naive_dt)
-            # 3. Get current time in UTC.
             now_aware_utc = datetime.now(pytz.utc)
-            # 4. Calculate duration.
             duration = now_aware_utc - clock_in_aware_utc
             hours_since_clock_in = round(duration.total_seconds() / 3600, 1)
-
         except ValueError as ve:
             current_app.logger.error(f"Dashboard: Error parsing or formatting clock_in_utc_str '{clock_in_utc_str}' for user {user_id}: {ve}")
             clock_in_display_time_str = "Error"
@@ -75,14 +63,8 @@ def dashboard():
             clock_in_display_time_str = "Error"
             hours_since_clock_in = "N/A"
 
-
-    annual_entitlement = 0
-    if g.user and 'annual_leave_entitlement' in g.user.keys():
-        annual_entitlement = g.user['annual_leave_entitlement'] if g.user['annual_leave_entitlement'] is not None else 0
-    else:
-        current_app.logger.warning(f"User {user_id} does not have 'annual_leave_entitlement' in g.user or g.user is None.")
-
-
+    annual_entitlement = g.user['annual_leave_entitlement'] if g.user and 'annual_leave_entitlement' in g.user.keys() and g.user['annual_leave_entitlement'] is not None else 0.0
+    
     approved_vacation_taken_query = """
         SELECT SUM(JULIANDAY(end_date) - JULIANDAY(start_date) + 1) as total_taken
         FROM leaves
@@ -98,7 +80,10 @@ def dashboard():
     ).fetchone()
 
     recent_leave_request = db.execute(
-        'SELECT leave_type, start_date, end_date, status FROM leaves WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
+        # Fetch created_at as UTC string for potential display or sorting consistency
+        '''SELECT leave_type, start_date, end_date, status, 
+                  strftime('%Y-%m-%d %H:%M:%S', created_at) as created_at_utc_str 
+           FROM leaves WHERE user_id = ? ORDER BY created_at DESC LIMIT 1''',
         (user_id,)
     ).fetchone()
 
@@ -107,17 +92,14 @@ def dashboard():
         (user_id,)
     ).fetchall()
 
-    # For announcements, created_at should also be localized in the template
     recent_announcements_raw = db.execute(
         "SELECT title, content, strftime('%Y-%m-%d %H:%M:%S', created_at) as created_at_utc_str FROM announcements ORDER BY created_at DESC LIMIT 2"
     ).fetchall()
-    # The template will use `| localdatetime` for created_at_utc_str
-
+    
     pending_onboarding_tasks_count = db.execute(
         "SELECT COUNT(id) FROM employee_onboarding_status WHERE employee_user_id = ? AND status = 'Pending'",
         (user_id,)
     ).fetchone()[0]
-
 
     team_members = None
     pending_team_leaves = None
@@ -125,14 +107,14 @@ def dashboard():
         team_query = "SELECT id, full_name, role, department FROM users WHERE manager_id = ?"
         team_params = (user_id,)
         if user_role == 'admin':
-            # Admin might see users without a manager or all non-admins
-            team_query = "SELECT id, full_name, role, department FROM users WHERE role != 'admin' ORDER BY full_name" # Simplified for example
+            team_query = "SELECT id, full_name, role, department FROM users WHERE role != 'admin' ORDER BY full_name" 
             team_params = ()
         team_members = db.execute(team_query, team_params).fetchall()
 
         leave_status_filter = "('pending')"
         pending_leaves_query = f"""
-            SELECT l.id, u.full_name as employee_name, l.leave_type, l.start_date, l.end_date
+            SELECT l.id, u.full_name as employee_name, l.leave_type, l.start_date, l.end_date,
+                   strftime('%Y-%m-%d %H:%M:%S', l.created_at) as created_at_utc_str
             FROM leaves l JOIN users u ON l.user_id = u.id
             WHERE l.status IN {leave_status_filter}
         """
@@ -143,20 +125,46 @@ def dashboard():
         pending_leaves_query += " ORDER BY l.start_date ASC LIMIT 3"
         pending_team_leaves = db.execute(pending_leaves_query, tuple(pending_leaves_params)).fetchall()
 
+    # Define Quick Actions based on role
+    quick_actions = []
+    if user_role == 'employee':
+        quick_actions.extend([
+            {'label': 'Request Leave', 'url': url_for('leaves.new_leave'), 'icon': 'fa-plane-departure'},
+            {'label': 'Submit Expense', 'url': url_for('expenses.submit_expense'), 'icon': 'fa-receipt'},
+            {'label': 'View My Payslips', 'url': url_for('payroll.view_my_payslips'), 'icon': 'fa-file-invoice-dollar'},
+        ])
+    elif user_role == 'manager':
+        quick_actions.extend([
+            {'label': 'Manage Team Leaves', 'url': url_for('leaves.manage_leaves'), 'icon': 'fa-user-clock'},
+            {'label': 'Manage Team Expenses', 'url': url_for('expenses.manage_expenses'), 'icon': 'fa-cash-register'},
+            {'label': 'Team Attendance', 'url': url_for('attendance.team_attendance'), 'icon': 'fa-users'},
+            {'label': 'Team Performance', 'url': url_for('performance.manage_performance'), 'icon': 'fa-clipboard-check'},
+        ])
+    elif user_role == 'admin':
+        quick_actions.extend([
+            {'label': 'User Management', 'url': url_for('users.view_users'), 'icon': 'fa-user-edit'},
+            {'label': 'Run Payroll', 'url': url_for('payroll.view_payroll_runs'), 'icon': 'fa-calculator'},
+            {'label': 'Manage Onboarding', 'url': url_for('onboarding.admin_tracking_view'), 'icon': 'fa-project-diagram'},
+            {'label': 'View Reports', 'url': url_for('reports.index'), 'icon': 'fa-chart-bar'},
+        ])
+    # Common action for all logged-in users
+    quick_actions.append({'label': 'View My Profile', 'url': url_for('main.profile'), 'icon': 'fa-id-card'})
+
 
     return render_template(
         'main/dashboard.html',
         is_clocked_in=is_clocked_in,
-        clock_in_time=clock_in_display_time_str, # Use the locally formatted time
+        clock_in_time=clock_in_display_time_str, 
         hours_since_clock_in=hours_since_clock_in,
         leave_balance=leave_balance,
-        recent_attendance=recent_attendance, # Consider localizing dates in template if needed
-        recent_leave_request=recent_leave_request, # Consider localizing dates in template
+        recent_attendance=recent_attendance, 
+        recent_leave_request=recent_leave_request, 
         active_benefits=active_benefits,
-        recent_announcements=recent_announcements_raw, # Pass raw, use filter in template
+        recent_announcements=recent_announcements_raw, 
         team_members=team_members,
-        pending_team_leaves=pending_team_leaves, # Consider localizing dates in template
-        pending_onboarding_tasks_count=pending_onboarding_tasks_count
+        pending_team_leaves=pending_team_leaves, 
+        pending_onboarding_tasks_count=pending_onboarding_tasks_count,
+        quick_actions=quick_actions # Pass quick actions to template
     )
 
 
@@ -165,9 +173,6 @@ def dashboard():
 def profile():
     db = get_db()
     user_id = g.user['id']
-    
-    # Fetch all IANA timezones for the dropdown
-    # In a real app, you might want to curate this list or use a library that provides user-friendly names
     available_timezones = pytz.common_timezones
 
     if request.method == 'POST':
@@ -180,7 +185,7 @@ def profile():
         address = request.form.get('address')
         emergency_contact_name = request.form.get('emergency_contact_name')
         emergency_contact_phone = request.form.get('emergency_contact_phone')
-        user_selected_timezone = request.form.get('timezone') # Get selected timezone
+        user_selected_timezone = request.form.get('timezone') 
 
         user_for_update = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
         error = None
@@ -204,12 +209,12 @@ def profile():
                         'UPDATE users SET password = ? WHERE id = ?',
                         (generate_password_hash(new_password), user_id)
                     )
-                    # No commit here yet, will be part of the main profile update commit
                     flash('Password updated successfully.', 'success')
                 except sqlite3.Error as e:
                     error = f"Database error updating password: {e}"
+                    db.rollback() # Rollback if password update fails before profile update
 
-        if not error:
+        if not error: # Proceed only if password update (if attempted) was successful or not attempted
             try:
                 db.execute(
                     '''UPDATE users SET full_name = ?, email = ?, phone_number = ?,
@@ -217,34 +222,34 @@ def profile():
                        timezone = ?
                        WHERE id = ?''',
                     (full_name, email, phone_number, address, emergency_contact_name, emergency_contact_phone,
-                     user_selected_timezone, user_id) # Add timezone to update
+                     user_selected_timezone if user_selected_timezone else user_for_update['timezone'], # Keep old if empty
+                     user_id)
                 )
                 db.commit()
                 flash('Profile updated successfully.', 'success')
                 
-                # Update g.user and session immediately with new timezone
                 updated_user_data = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
                 if updated_user_data:
-                    g.user = updated_user_data # Update g.user to sqlite3.Row
+                    g.user = updated_user_data 
                     if updated_user_data['timezone']:
                         session['user_timezone'] = updated_user_data['timezone']
                         g.user_timezone = updated_user_data['timezone']
                     else:
                         session.pop('user_timezone', None)
                         g.user_timezone = current_app.config.get('USER_DEFAULT_TIMEZONE', 'UTC')
-
                 return redirect(url_for('main.profile'))
             except sqlite3.IntegrityError:
                 error = f"Email '{email}' may already be registered by another user."
+                db.rollback()
             except sqlite3.Error as e:
                 error = f"Database error updating profile: {e}"
+                db.rollback()
         
         if error:
             flash(error, 'error')
-            db.rollback()
 
-    user_data_for_template = g.user # g.user is sqlite3.Row
-    if user_data_for_template is None:
+    user_data_for_template = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone() # Re-fetch fresh data
+    if user_data_for_template is None: # Should not happen if user is logged in
         flash('User not found.', 'error')
         return redirect(url_for('auth.logout'))
 
@@ -258,19 +263,16 @@ def profile():
 def api_time_clock_status():
     db = get_db()
     user_id = g.user['id']
-    # Fetch as string to ensure consistent handling
     active_clock_entry = db.execute(
         "SELECT id, strftime('%Y-%m-%d %H:%M:%S', clock_in) as clock_in_utc_str FROM time_clock WHERE user_id = ? AND status = ? ORDER BY clock_in DESC LIMIT 1",
         (user_id, 'active')
     ).fetchone()
 
     is_clocked_in = active_clock_entry is not None
-    clock_in_time_utc_iso_str = None # This will be the UTC string
+    clock_in_time_utc_iso_str = None 
     if is_clocked_in:
         clock_in_time_utc_iso_str = active_clock_entry['clock_in_utc_str']
-        # No conversion here; API returns UTC. Client-side JS should handle localization if needed.
-
     return jsonify({
         'is_clocked_in': is_clocked_in,
-        'clock_in_time': clock_in_time_utc_iso_str # Send UTC time
+        'clock_in_time': clock_in_time_utc_iso_str 
     })

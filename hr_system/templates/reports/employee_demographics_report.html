@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+
+{% block title %}Employee Demographics Report{% endblock %}
+
+{% block head %}
+{{ super() }}
+{# Include Chart.js CDN #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<style>
+    /* Styles from reports.html for filter section and card can be reused or defined in base.html if common */
+    .filter-section {
+        background-color: #fff;
+        padding: 1.5rem;
+        border-radius: 0.6rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,.05);
+        margin-bottom: 2rem;
+        border: 1px solid #e9ecef;
+    }
+    .filter-section .form-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #495057;
+    }
+    .report-table-card {
+        background-color: #fff;
+        border-radius: 0.6rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,.05);
+        border: 1px solid #e9ecef;
+        margin-bottom: 2rem;
+    }
+    .report-table-card .card-header {
+        font-weight: 600;
+        background-color: #f8f9fa; /* Consistent with other card headers */
+        border-bottom: 1px solid #e9ecef;
+    }
+    .chart-container {
+        padding: 1rem;
+        background-color: #fff;
+        border-radius: 0.6rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,.05);
+        border: 1px solid #e9ecef;
+        margin-bottom: 1.5rem;
+    }
+    .chart-container h5 {
+        margin-bottom: 1rem;
+        font-weight: 600;
+        color: #343a40;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h2">Employee Demographics Report</h1>
+    <a href="{{ url_for('reports.index') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back to Reports Dashboard
+    </a>
+</div>
+
+{# Filter Section #}
+<div class="filter-section">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label for="department" class="form-label">Department</label>
+            <select class="form-select form-select-sm" id="department" name="department">
+                <option value="all" {% if selected_department == 'all' %}selected{% endif %}>All Departments</option>
+                {% for dept in distinct_departments %}
+                <option value="{{ dept }}" {% if selected_department == dept %}selected{% endif %}>{{ dept }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label for="role" class="form-label">Role</label>
+            <select class="form-select form-select-sm" id="role" name="role">
+                <option value="all" {% if selected_role == 'all' %}selected{% endif %}>All Roles</option>
+                {% for r in distinct_roles %}
+                <option value="{{ r }}" {% if selected_role == r %}selected{% endif %}>{{ r | title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary btn-sm w-100">Apply Filters</button>
+        </div>
+        <div class="col-md-2">
+            <a href="{{ url_for('reports.employee_demographics_report') }}" class="btn btn-secondary btn-sm w-100">Reset Filters</a>
+        </div>
+    </form>
+</div>
+
+{# Charts Section #}
+<div class="row g-4">
+    <div class="col-lg-4 col-md-6">
+        <div class="chart-container">
+            <h5>Distribution by Department</h5>
+            <canvas id="departmentChart"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-6">
+        <div class="chart-container">
+            <h5>Distribution by Role</h5>
+            <canvas id="roleChart"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-12"> {# Full width on medium for better view #}
+        <div class="chart-container">
+            <h5>Distribution by Tenure</h5>
+            <canvas id="tenureChart"></canvas>
+        </div>
+    </div>
+</div>
+
+
+{# Summary Tables Section #}
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="report-table-card">
+            <div class="card-header">Department Summary</div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped table-hover mb-0">
+                    <thead class="table-light"><tr><th>Department</th><th>Employee Count</th></tr></thead>
+                    <tbody>
+                        {% for dept, count in departments_summary.items() %}
+                        <tr><td>{{ dept }}</td><td>{{ count }}</td></tr>
+                        {% else %}
+                        <tr><td colspan="2" class="text-center text-muted">No data for departments.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="report-table-card">
+            <div class="card-header">Role Summary</div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped table-hover mb-0">
+                    <thead class="table-light"><tr><th>Role</th><th>Employee Count</th></tr></thead>
+                    <tbody>
+                        {% for role_name, count in roles_summary.items() %}
+                        <tr><td>{{ role_name | title }}</td><td>{{ count }}</td></tr>
+                        {% else %}
+                        <tr><td colspan="2" class="text-center text-muted">No data for roles.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="report-table-card">
+            <div class="card-header">Tenure Summary</div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped table-hover mb-0">
+                    <thead class="table-light"><tr><th>Tenure Bracket</th><th>Employee Count</th></tr></thead>
+                    <tbody>
+                        {% for bracket, count in tenure_summary.items() %}
+                        <tr><td>{{ bracket }}</td><td>{{ count }}</td></tr>
+                        {% else %}
+                        <tr><td colspan="2" class="text-center text-muted">No data for tenure.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{# Detailed Employee List (Optional - can be very long) #}
+{# 
+<div class="report-table-card mt-4">
+    <div class="card-header">Detailed Employee List (Filtered)</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Full Name</th>
+                        <th>Department</th>
+                        <th>Role</th>
+                        <th>Hire Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emp in employees %}
+                    <tr>
+                        <td>{{ emp.id }}</td>
+                        <td>{{ emp.full_name }}</td>
+                        <td>{{ emp.department or 'N/A' }}</td>
+                        <td>{{ emp.role | title }}</td>
+                        <td>{{ emp.hire_date or 'N/A' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center text-muted">No employees found matching criteria.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+#}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Department Chart
+    const deptCtx = document.getElementById('departmentChart');
+    if (deptCtx && typeof Chart !== 'undefined') {
+        const departmentChartData = JSON.parse('{{ department_chart_data | tojson | safe }}');
+        new Chart(deptCtx, {
+            type: 'pie', // Or 'doughnut'
+            data: {
+                labels: departmentChartData.labels,
+                datasets: [{
+                    label: 'Employees by Department',
+                    data: departmentChartData.data,
+                    backgroundColor: [ // Add more colors if more departments
+                        'rgba(54, 162, 235, 0.7)', 'rgba(255, 99, 132, 0.7)',
+                        'rgba(255, 206, 86, 0.7)', 'rgba(75, 192, 192, 0.7)',
+                        'rgba(153, 102, 255, 0.7)', 'rgba(255, 159, 64, 0.7)',
+                        'rgba(199, 199, 199, 0.7)', 'rgba(83, 102, 255, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)', 'rgba(255, 99, 132, 1)',
+                        'rgba(255, 206, 86, 1)', 'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)',
+                        'rgba(199, 199, 199, 1)', 'rgba(83, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true, // Keep aspect ratio, adjust container size for layout
+                plugins: { legend: { position: 'top' } }
+            }
+        });
+    }
+
+    // Role Chart
+    const roleCtx = document.getElementById('roleChart');
+    if (roleCtx && typeof Chart !== 'undefined') {
+        const roleChartData = JSON.parse('{{ role_chart_data | tojson | safe }}');
+        new Chart(roleCtx, {
+            type: 'bar',
+            data: {
+                labels: roleChartData.labels.map(label => label.charAt(0).toUpperCase() + label.slice(1)), // Capitalize
+                datasets: [{
+                    label: 'Employees by Role',
+                    data: roleChartData.data,
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                indexAxis: 'y', // Horizontal bar chart
+                scales: { x: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    // Tenure Chart
+    const tenureCtx = document.getElementById('tenureChart');
+    if (tenureCtx && typeof Chart !== 'undefined') {
+        const tenureChartData = JSON.parse('{{ tenure_chart_data | tojson | safe }}');
+        new Chart(tenureCtx, {
+            type: 'bar',
+            data: {
+                labels: tenureChartData.labels,
+                datasets: [{
+                    label: 'Employees by Tenure',
+                    data: tenureChartData.data,
+                    backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, // Ensure y-axis shows whole numbers
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
