@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Salary Component{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">Edit Salary Component for: {{ employee['full_name'] }}</h1>
+
+<div class="card shadow-sm">
+     <div class="card-header">
+        Edit: <strong>{{ component['component_name'] }}</strong> ({{ component['component_type'] | title }})
+        {# Example if displaying created_at:
+        {% if component.created_at_utc_str %}
+            <small class="d-block text-muted">Added: {{ component.created_at_utc_str | localdatetime(format_str='%Y-%m-%d') }}</small>
+        {% endif %}
+        #}
+    </div>
+    <div class="card-body">
+        {# Point form action to the edit route for this specific component ID #}
+        <form method="post" action="{{ url_for('salaries.edit_salary_component', component_id=component['id']) }}">
+            {# -- Component Details -- #}
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="component_type" class="form-label">Component Type <span class="text-danger">*</span></label>
+                    <select class="form-select" id="component_type" name="component_type" required>
+                        <option value="allowance" {% if component['component_type'] == 'allowance' %}selected{% endif %}>Allowance</option>
+                        <option value="deduction" {% if component['component_type'] == 'deduction' %}selected{% endif %}>Deduction</option>
+                    </select>
+                </div>
+                 <div class="col-md-6 mb-3">
+                    <label for="component_name" class="form-label">Component Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="component_name" name="component_name" value="{{ component['component_name'] }}" required>
+                </div>
+            </div>
+
+            {# -- Calculation Type Selection -- #}
+            <div class="mb-3">
+                <label for="calculation_type" class="form-label">Calculation Type <span class="text-danger">*</span></label>
+                <select class="form-select" id="calculation_type" name="calculation_type" required onchange="toggleCalculationFields()">
+                    <option value="fixed" {% if component['calculation_type'] == 'fixed' %}selected{% endif %}>Fixed Amount</option>
+                    <option value="percentage" {% if component['calculation_type'] == 'percentage' %}selected{% endif %}>Percentage</option>
+                </select>
+            </div>
+
+            {# -- Fields for Fixed Amount -- #}
+            {# Pre-fill value if it exists #}
+            <div id="fixed_fields">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="amount_fixed" class="form-label">Amount <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" class="form-control" id="amount_fixed" name="amount_fixed" value="{{ component['amount'] if component['amount'] is not none else '' }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="employer_contribution_fixed" class="form-label">Employer Contribution (Fixed, Optional)</label>
+                        <input type="number" step="0.01" class="form-control" id="employer_contribution_fixed" name="employer_contribution_fixed" value="{{ component['employer_contribution_fixed'] if component['employer_contribution_fixed'] is not none else '' }}" placeholder="e.g., Company share for insurance">
+                    </div>
+                </div>
+            </div>
+
+            {# -- Fields for Percentage -- #}
+            {# Pre-fill values if they exist #}
+            <div id="percentage_fields" style="display: none;">
+                 <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="percentage_rate" class="form-label">Percentage Rate (%) <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" class="form-control" id="percentage_rate" name="percentage_rate" value="{{ component['percentage_rate'] if component['percentage_rate'] is not none else '' }}" placeholder="e.g., 7.5">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                         <label for="calculation_basis" class="form-label">Basis <span class="text-danger">*</span></label>
+                         <select class="form-select" id="calculation_basis" name="calculation_basis">
+                             <option value="basic_salary" {% if component['calculation_basis'] == 'basic_salary' %}selected{% endif %}>Basic Salary</option>
+                             {# <option value="gross_pay" {% if component['calculation_basis'] == 'gross_pay' %}selected{% endif %}>Gross Pay</option> #}
+                         </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="upper_limit" class="form-label">Salary Cap (Optional)</label>
+                        <input type="number" step="0.01" class="form-control" id="upper_limit" name="upper_limit" value="{{ component['upper_limit'] if component['upper_limit'] is not none else '' }}" placeholder="Max salary for calculation">
+                    </div>
+                 </div>
+                 <div class="row">
+                     <div class="col-md-6 mb-3">
+                        <label for="employer_contribution_percent" class="form-label">Employer Contribution (%, Optional)</label>
+                        <input type="number" step="0.01" class="form-control" id="employer_contribution_percent" name="employer_contribution_percent" value="{{ component['employer_contribution_percent'] if component['employer_contribution_percent'] is not none else '' }}" placeholder="e.g., Company share %">
+                    </div>
+                 </div>
+            </div>
+
+            {# -- Common Fields -- #}
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="frequency" class="form-label">Frequency <span class="text-danger">*</span></label>
+                    <select class="form-select" id="frequency" name="frequency" required>
+                        <option value="Monthly" {% if component['frequency'] == 'Monthly' %}selected{% endif %}>Monthly</option>
+                        <option value="Annually" {% if component['frequency'] == 'Annually' %}selected{% endif %}>Annually</option>
+                        <option value="One-Time" {% if component['frequency'] == 'One-Time' %}selected{% endif %}>One-Time</option>
+                    </select>
+                </div>
+                 <div class="col-md-6 mb-3">
+                     <label class="form-label">&nbsp;</label> {# Spacer #}
+                     <div class="form-check">
+                      {# Check the box if is_statutory is 1 #}
+                      <input class="form-check-input" type="checkbox" value="on" id="is_statutory" name="is_statutory" {% if component['is_statutory'] == 1 %}checked{% endif %}>
+                      <label class="form-check-label" for="is_statutory">
+                        Is Statutory Deduction? (e.g., Tax, SS)
+                      </label>
+                    </div>
+                 </div>
+            </div>
+             <div class="mb-3">
+                <label for="notes" class="form-label">Notes (Optional)</label>
+                <textarea class="form-control" id="notes" name="notes" rows="2">{{ component['notes'] or '' }}</textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Update Component</button>
+            {# Link back to the main salary edit page for this employee #}
+            <a href="{{ url_for('salaries.edit_employee_salary', user_id=employee['id']) }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{# Reuse the same Javascript from add_salary_component.html #}
+<script>
+    function toggleCalculationFields() {
+        const calcType = document.getElementById('calculation_type').value;
+        const fixedFields = document.getElementById('fixed_fields');
+        const percentageFields = document.getElementById('percentage_fields');
+        const amountInput = document.getElementById('amount_fixed');
+        const percentageInput = document.getElementById('percentage_rate');
+        const basisInput = document.getElementById('calculation_basis');
+
+        if (calcType === 'fixed') {
+            fixedFields.style.display = 'block';
+            percentageFields.style.display = 'none';
+            amountInput.required = true; 
+            percentageInput.required = false; 
+            basisInput.required = false;
+        } else if (calcType === 'percentage') {
+            fixedFields.style.display = 'none';
+            percentageFields.style.display = 'block';
+            amountInput.required = false; 
+            percentageInput.required = true; 
+            basisInput.required = true;
+        }
+    }
+    document.addEventListener('DOMContentLoaded', toggleCalculationFields);
+</script>
+{% endblock %}

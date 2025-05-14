@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}Payroll Runs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">Payroll Runs</h1>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newRunModal">
+        <i class="fas fa-play-circle me-1"></i> Run New Payroll
+    </button>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Period</th>
+                        <th>Run Date</th>
+                        <th>Processed By</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for run in runs %}
+                    <tr>
+                        <td>{{ run['pay_period_month'] }}/{{ run['pay_period_year'] }}</td>
+                        <td>
+                            {% if run['run_date_utc_str'] %}
+                                {{ run['run_date_utc_str'] | localdatetime }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>{{ run['processor_name'] or 'N/A' }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if run['status'] == 'Completed' %}bg-success
+                                {% elif run['status'] == 'Processing' %}bg-info text-dark
+                                {% elif run['status'] == 'Completed with warnings' %}bg-warning text-dark
+                                {% elif run['status'] == 'Failed' %}bg-danger
+                                {% else %}bg-secondary
+                                {% endif %}">
+                                {{ run['status'] }}
+                            </span>
+                        </td>
+                        <td>{{ run['notes'] | truncate(50) if run['notes'] else '' }}</td>
+                        <td>
+                            <a href="{{ url_for('payroll.view_run_details', run_id=run['id']) }}" class="btn btn-sm btn-outline-primary py-0">
+                                <i class="fas fa-eye me-1"></i> Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-muted">No payroll runs found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="newRunModal" tabindex="-1" aria-labelledby="newRunModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{{ url_for('payroll.run_new_payroll') }}">
+        <div class="modal-header">
+          <h5 class="modal-title" id="newRunModalLabel">Run New Payroll</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="year" class="form-label">Year</label>
+            <input type="number" class="form-control" id="year" name="year" value="{{ current_year }}" required>
+          </div>
+          <div class="mb-3">
+            <label for="month" class="form-label">Month</label>
+            <select class="form-select" id="month" name="month" required>
+                {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if m == current_month %}selected{% endif %}>{{ m }} - {{ ["January","February","March","April","May","June","July","August","September","October","November","December"][m-1] }}</option>
+                {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Run Payroll</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

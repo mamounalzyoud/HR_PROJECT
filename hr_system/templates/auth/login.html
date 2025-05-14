@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - HR Portal{% endblock %}
+
+{% block content %}
+<div class="login-page-wrapper">
+    <div class="login-container-enhanced">
+        <div class="text-center mb-4">
+            {# Consider replacing with an actual logo if available #}
+            <i class="fas fa-fingerprint fa-3x text-primary mb-3"></i> 
+            <h1 class="h3 mb-1 fw-normal">Welcome to HR Portal</h1>
+            <p class="text-muted">Please sign in to access your account.</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                {# Display flash messages directly above the form inside the login box #}
+                <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show shadow-sm small mb-3" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="post" action="{{ url_for('auth.login') }}">
+            <div class="form-floating mb-3">
+                <input type="text" class="form-control" id="username" name="username" placeholder="Username" required autofocus>
+                <label for="username"><i class="fas fa-user me-2"></i>Username</label>
+            </div>
+            <div class="form-floating mb-3">
+                <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                <label for="password"><i class="fas fa-lock me-2"></i>Password</label>
+            </div>
+
+            {# Optional: Remember Me & Forgot Password 
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="rememberMe">
+                    <label class="form-check-label small" for="rememberMe">
+                        Remember me
+                    </label>
+                </div>
+                <a href="#" class="small text-decoration-none">Forgot password?</a>
+            </div>
+            #}
+
+            <button class="w-100 btn btn-lg btn-primary login-button" type="submit">
+                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+            </button>
+        </form>
+        <div class="text-center mt-4">
+            <small class="text-muted">Default admin: admin / admin123</small>
+        </div>
+        <p class="mt-4 mb-1 text-center text-muted copyright-text">&copy; {{ now.year }} HR Portal - All Rights Reserved</p> {# Added current year #}
+    </div>
+</div>
+{% endblock %}
+
+{% block head %}
+{{ super() }} {# Ensures any head content from base.html is included #}
+<style>
+    .login-page-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh; /* Full viewport height */
+        background-color: #eef1f5; /* Light grey-blue background */
+        padding: 1rem;
+    }
+
+    .login-container-enhanced {
+        background: #ffffff;
+        padding: 2.5rem 2rem; /* Increased padding */
+        border-radius: 12px; /* More rounded corners */
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); /* Softer, deeper shadow */
+        width: 100%;
+        max-width: 420px; /* Slightly wider */
+    }
+
+    .login-container-enhanced .form-floating > .form-control {
+        height: calc(3.5rem + 2px); /* Taller input fields */
+        line-height: 1.25;
+        padding-top: 1.625rem;
+        padding-bottom: 0.625rem;
+    }
+
+    .login-container-enhanced .form-floating > label {
+        padding-top: 1rem; /* Adjust label position */
+        opacity: 0.65;
+        transform-origin: 0 0;
+        transform: scale(.85) translateY(-0.5rem) translateX(0.15rem);
+        display: flex; /* To align icon and text */
+        align-items: center;
+    }
+    
+    .login-container-enhanced .form-floating > .form-control:focus ~ label,
+    .login-container-enhanced .form-floating > .form-control:not(:placeholder-shown) ~ label {
+        opacity: 0.65;
+        transform: scale(.85) translateY(-0.5rem) translateX(0.15rem);
+    }
+
+    .login-container-enhanced .form-floating > .form-control:focus {
+        border-color: #5dade2; /* Primary color for focus */
+        box-shadow: 0 0 0 0.2rem rgba(93, 173, 226, 0.25);
+    }
+    
+    .login-container-enhanced .login-button {
+        padding: 0.75rem 1.25rem;
+        font-weight: 500;
+        transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+    }
+
+    .login-container-enhanced .login-button:hover {
+        background-color: #3498db; /* Slightly darker primary on hover */
+        transform: translateY(-1px);
+    }
+    .login-container-enhanced .login-button:active {
+        transform: translateY(0px);
+    }
+
+    .login-container-enhanced .copyright-text {
+        font-size: 0.8rem;
+    }
+
+    /* Override base.html's .main-content-guest if it conflicts */
+    /* This is important if login.html is the only guest page */
+    body > .main-content-guest {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: none !important; /* Allow login-page-wrapper to control width */
+    }
+
+</style>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">{{ title }}</h1>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post"> {# Action URL is passed via form_action_url in the route #}
+            <div class="mb-3">
+                <label for="name" class="form-label">Checklist Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="name" name="name" value="{{ request.form['name'] or checklist['name'] if checklist else '' }}" required>
+            </div>
+            <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="3">{{ request.form['description'] or checklist['description'] if checklist else '' }}</textarea>
+            </div>
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="is_default" name="is_default" {% if (checklist and checklist['is_default']) or (request.form and request.form['is_default'] == 'on') %}checked{% endif %}>
+                <label class="form-check-label" for="is_default">Set as Default Checklist</label>
+                <small class="form-text text-muted d-block">If checked, any other current default checklist will be unset.</small>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                {% if checklist %}Save Changes{% else %}Create Checklist{% endif %}
+            </button>
+            <a href="{{ url_for('onboarding.manage_checklists') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

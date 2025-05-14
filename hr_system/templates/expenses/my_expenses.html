@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}My Expenses{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">My Expense Claims</h1>
+    <a href="{{ url_for('expenses.submit_expense') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> Submit New Claim
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Submitted</th>
+                        <th>Expense Date</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Approved By</th>
+                        <th>Approved At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for claim in claims %}
+                    {% set status_class = {'Pending':'warning', 'Approved':'success', 'Rejected':'danger'}.get(claim.status, 'secondary') %}
+                    <tr>
+                        <td>
+                            {% if claim['submitted_at_utc_str'] %}
+                                {{ claim['submitted_at_utc_str'] | localdatetime(format_str='%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>{{ claim['expense_date'] }}</td> {# Assuming expense_date is date-only #}
+                        <td>{{ claim['category'] }}</td>
+                        <td class="text-end">{{ claim['currency'] }} {{ '%.2f' | format(claim['amount']) }}</td>
+                        <td>{{ claim['description'] | truncate(50) }}</td>
+                        <td><span class="badge bg-{{ status_class }}">{{ claim['status'] }}</span></td>
+                        <td>{{ claim['approver_name'] or 'N/A' }}</td>
+                        <td>
+                            {% if claim['approved_at_utc_str'] %}
+                                {{ claim['approved_at_utc_str'] | localdatetime(format_str='%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="text-center text-muted">You have not submitted any expense claims yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

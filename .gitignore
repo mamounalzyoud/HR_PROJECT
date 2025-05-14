@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.env
+.env
+venv/
+env/
+ENV/
+# Archives
+*.zip
+*.7z
+
+# Instance folder specific (if you don't want to track the DB or all uploads)
+# If you want to track the DB but not uploads:
+# instance/uploads/
+# If you don't want to track the DB either (common for development databases):
+instance/hr_system.db
+instance/uploads/
+
+# Other common ignores
+.vscode/ # If you don't want to share VS Code specific settings
+# .DS_Store # For macOS users

@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Performance Reviews{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">Manage Performance Reviews</h1>
+    {# Button to create review might be linked from a user list or here if a global "create" is desired #}
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="fas fa-users-cog me-2"></i>My Direct Reports</h5>
+    </div>
+    <div class="card-body">
+        {% if reports %}
+            <ul class="list-group list-group-flush">
+                {% for report_user in reports %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ report_user.full_name }} ({{ report_user.department or 'N/A' }})
+                    <a href="{{ url_for('performance.create_review', employee_id=report_user.id) }}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i> Create Review
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted">You have no direct reports assigned.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Reviews I've Submitted</h5>
+    </div>
+    <div class="card-body">
+        {% if submitted_reviews %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Employee</th>
+                            <th>Review Period</th>
+                            <th>Review Date</th>
+                            <th>Rating</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for review in submitted_reviews %}
+                        <tr>
+                            <td>{{ review.employee_name }}</td>
+                            <td>{{ review.review_period_start }} - {{ review.review_period_end }}</td>
+                            <td>
+                                {% if review.review_date_utc_str %}
+                                    {{ review.review_date_utc_str | localdatetime(format_str='%Y-%m-%d') }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>{{ review.overall_rating or 'N/A' }}/5</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if review.status == 'Completed' or review.status == 'Acknowledged' else 'secondary' }}">
+                                    {{ review.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('performance.view_review', review_id=review.id) }}" class="btn btn-sm btn-outline-primary py-0">
+                                    <i class="fas fa-eye me-1"></i> View
+                                </a>
+                                {# Add Edit button if applicable #}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-center text-muted">You have not submitted any reviews yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

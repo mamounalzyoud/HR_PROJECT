@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+    <h1 class="h2">My Profile</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-user-circle me-2"></i>Personal Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Full Name:</strong> {{ user_profile['full_name'] }}</p>
+                <p><strong>Username:</strong> {{ user_profile['username'] }}</p>
+                <p><strong>Email:</strong> {{ user_profile['email'] }}</p>
+                <p><strong>Role:</strong> {{ user_profile['role'] | title }}</p>
+                <p><strong>Department:</strong> {{ user_profile['department'] or 'N/A' }}</p>
+                <p><strong>Hire Date:</strong> {{ user_profile['hire_date'] or 'N/A' }}</p> {# Date-only, no filter needed #}
+                {# Example if displaying user registration timestamp:
+                {% if user_profile.created_at %}
+                <p><strong>Registered On:</strong> {{ user_profile.created_at | localdatetime }}</p>
+                {% endif %}
+                #}
+                <p><strong>Phone Number:</strong> {{ user_profile['phone_number'] or 'N/A' }}</p>
+                <p><strong>Address:</strong> {{ user_profile['address'] or 'N/A' }}</p>
+                 <p><strong>Timezone:</strong> {{ user_profile['timezone'] or config.USER_DEFAULT_TIMEZONE }}</p>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Emergency Contact</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Contact Name:</strong> {{ user_profile['emergency_contact_name'] or 'N/A' }}</p>
+                <p><strong>Contact Phone:</strong> {{ user_profile['emergency_contact_phone'] or 'N/A' }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                 <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Update Profile</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="mb-3">
+                        <label for="full_name" class="form-label">Full Name</label>
+                        <input type="text" class="form-control form-control-sm" id="full_name" name="full_name" value="{{ request.form.full_name or user_profile.full_name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control form-control-sm" id="email" name="email" value="{{ request.form.email or user_profile.email }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone_number" class="form-label">Phone Number</label>
+                        <input type="tel" class="form-control form-control-sm" id="phone_number" name="phone_number" value="{{ request.form.phone_number or user_profile.phone_number or '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Address</label>
+                        <textarea class="form-control form-control-sm" id="address" name="address" rows="2">{{ request.form.address or user_profile.address or '' }}</textarea>
+                    </div>
+
+                    {# Timezone Selection - Already in your main.py's profile route logic #}
+                    <div class="mb-3">
+                        <label for="timezone" class="form-label">Preferred Timezone</label>
+                        <select class="form-select form-select-sm" id="timezone" name="timezone">
+                            <option value="">-- Use Application Default ({{ config.USER_DEFAULT_TIMEZONE }}) --</option>
+                            {% for tz in available_timezones %}
+                                <option value="{{ tz }}" {% if (request.form.timezone == tz) or (not request.form and user_profile.timezone == tz) %}selected{% endif %}>{{ tz }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">Times in the application will be displayed in this timezone.</small>
+                    </div>
+
+                    <hr>
+                    <h6 class="mb-3">Update Emergency Contact</h6>
+                     <div class="mb-3">
+                        <label for="emergency_contact_name" class="form-label">Emergency Contact Name</label>
+                        <input type="text" class="form-control form-control-sm" id="emergency_contact_name" name="emergency_contact_name" value="{{ request.form.emergency_contact_name or user_profile.emergency_contact_name or '' }}">
+                    </div>
+                     <div class="mb-3">
+                        <label for="emergency_contact_phone" class="form-label">Emergency Contact Phone</label>
+                        <input type="tel" class="form-control form-control-sm" id="emergency_contact_phone" name="emergency_contact_phone" value="{{ request.form.emergency_contact_phone or user_profile.emergency_contact_phone or '' }}">
+                    </div>
+
+                    <hr>
+                    <h6 class="mb-3">Change Password (Optional)</h6>
+                    <div class="mb-3">
+                        <label for="current_password" class="form-label">Current Password</label>
+                        <input type="password" class="form-control form-control-sm" id="current_password" name="current_password" placeholder="Enter if changing password">
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_password" class="form-label">New Password</label>
+                        <input type="password" class="form-control form-control-sm" id="new_password" name="new_password">
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Confirm New Password</label>
+                        <input type="password" class="form-control form-control-sm" id="confirm_password" name="confirm_password">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-2"></i>Update Profile</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

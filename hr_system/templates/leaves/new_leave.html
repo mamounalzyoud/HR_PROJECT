@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}New Leave Request{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">New Leave Request</h1>
+
+{# --- ADDED: Show Balance --- #}
+<div class="alert alert-info" role="alert">
+  Your current available Vacation leave balance is approximately: <strong>{{ '%.1f' | format(remaining_balance) }} days</strong>.
+</div>
+{# --- END ADDED --- #}
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post" action="{{ url_for('leaves.new_leave') }}">
+            <div class="mb-3">
+                <label for="leave_type" class="form-label">Leave Type <span class="text-danger">*</span></label>
+                <select class="form-select" id="leave_type" name="leave_type" required>
+                    <option value="" disabled selected>Select Leave Type...</option>
+                    <option value="Vacation">Vacation</option>
+                    <option value="Sick Leave">Sick Leave</option>
+                    <option value="Personal">Personal Day</option>
+                    <option value="Unpaid">Unpaid Leave</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="end_date" class="form-label">End Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" required>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="reason" class="form-label">Reason (Optional)</label>
+                <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="Enter reason for leave..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit Request</button>
+            <a href="{{ url_for('leaves.view_leaves') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

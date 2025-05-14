@@ -1,0 +1,114 @@
+/hr_project/
+|
+|-- run.py                        # Entry point to start the Flask application
+|-- Files structure.txt           # Your original file describing the planned structure
+|
+|-- instance/                     # Flask instance folder (for non-versioned files)
+|   |-- hr_system.db              # SQLite database file (created by 'flask init-db')
+|   |-- uploads/
+|   |   |-- onboarding_attachments/ # Folder for attachments related to onboarding tasks
+|   |   |   |-- user_7_20250510040302927190_Rechnung-nc-4157651.pdf
+|   |   |   |-- user_6_20250510152630422584_Payslip_03_2025_Mary_Jones.pdf
+|   |   |   |-- user_6_20250510143326726291_Payslip_03_2025_Mary_Jones.pdf
+|   |   |   |-- user_6_20250510043521189275_Payslip_03_2025_Mary_Jones.pdf
+|   |   |   |-- user_4_20250510143437470731_Payslip_03_2025_Mary_Jones.pdf
+|   |   |   |-- user_4_20250510130714696536_Payslip_03_2025_Mary_Jones.pdf
+|   |   |   |-- user_4_20250510053850842836_ricardo_vargas_simplified_practice-guide_flow_color_EN.pdf
+|   |   |   |-- user_4_20250510040227447872_ricardo_vargas_simplified_practice-guide_flow_color_EN.pdf
+|   |   |   |-- 20250510032420186542_ricardo_vargas_simplified_practice-guide_flow_color_EN.pdf
+|   |   |   # (Potentially other uploaded files for user submissions or task templates)
+|
+|-- hr_system/                    # The main application package
+    |
+    |-- __init__.py               # Initializes the Flask app, extensions, and registers blueprints
+    |-- auth.py                   # Authentication blueprint (login, logout, access control)
+    |-- attendance.py             # Attendance and Time Clock blueprint
+    |-- announcements.py          # Announcements blueprint
+    |-- benefits.py               # Benefits blueprint
+    |-- db.py                     # Database setup (SQLite) and CLI commands (init-db)
+    |-- expenses.py               # Expenses blueprint
+    |-- leaves.py                 # Leave management blueprint
+    |-- main.py                   # Main blueprint (dashboard, profile)
+    |-- notifications.py          # Handles notification logic (currently mock emails, in-app planned)
+    |-- onboarding.py             # Onboarding module blueprint (checklists, tasks, assignments, tracking)
+    |-- payroll.py                # Payroll processing blueprint
+    |-- performance.py            # Performance reviews blueprint
+    |-- reports.py                # Reports blueprint
+    |-- salaries.py               # Salaries and salary components blueprint
+    |-- users.py                  # User management blueprint
+    |
+    |-- templates/                # Folder for all HTML templates (using Jinja2)
+    |   |
+    |   |-- base.html             # Base layout template (sidebar, navigation, flash messages)
+    |   |
+    |   |-- auth/                 # Authentication related templates
+    |   |   |-- login.html
+    |   |
+    |   |-- main/                 # Core application page templates
+    |   |   |-- dashboard.html
+    |   |   |-- profile.html
+    |   |
+    |   |-- users/                # User management templates
+    |   |   |-- users.html
+    |   |   |-- new_user.html
+    |   |   |-- edit_user.html
+    |   |
+    |   |-- attendance/           # Attendance and time clock templates
+    |   |   |-- attendance.html
+    |   |   |-- team_attendance.html
+    |   |
+    |   |-- leaves/               # Leave management templates
+    |   |   |-- leaves.html
+    |   |   |-- new_leave.html
+    |   |   |-- manage_leaves.html
+    |   |
+    |   |-- benefits/             # Benefits templates
+    |   |   |-- benefits.html
+    |   |   |-- add_benefit.html
+    |   |   |-- manage_benefits.html
+    |   |
+    |   |-- salaries/             # Salary management templates
+    |   |   |-- manage_salaries.html
+    |   |   |-- edit_salary.html
+    |   |   |-- add_salary_component.html
+    |   |   |-- edit_salary_component.html
+    |   |
+    |   |-- announcements/        # Announcements templates
+    |   |   |-- announcements.html
+    |   |   |-- new_announcement.html
+    |   |
+    |   |-- reports/              # Reports templates
+    |   |   |-- reports.html
+    |   |   |-- attendance_report.html
+    |   |   |-- leave_report.html
+    |   |
+    |   |-- payroll/              # Payroll templates
+    |   |   |-- runs.html
+    |   |   |-- run_detail.html
+    |   |   |-- payslip_list.html
+    |   |   |-- payslip_detail.html
+    |   |   |-- payslip_pdf.html    # Template for PDF generation
+    |   |
+    |   |-- performance/          # Performance review templates
+    |   |   |-- my_reviews.html
+    |   |   |-- manage_reviews.html
+    |   |   |-- create_review.html
+    |   |   |-- view_review.html
+    |   |
+    |   |-- expenses/             # Expense claim templates
+    |   |   |-- my_expenses.html
+    |   |   |-- new_expense.html
+    |   |   |-- manage_expenses.html
+    |   |
+    |   |-- onboarding/           # Onboarding module templates
+    |   |   |-- manage_checklists.html
+    |   |   |-- edit_checklist.html
+    |   |   |-- manage_tasks.html
+    |   |   |-- edit_task.html
+    |   |   |-- assign_onboarding.html
+    |   |   |-- admin_tracking.html
+    |   |   |-- my_onboarding_tasks.html  # Includes modal for task details
+    |   |   |-- responsible_tasks.html    # Includes modal for task details
+    |
+    |-- static/                   # (Optional) Folder for static files (CSS, JS, images)
+        |-- style.css             # (Example, not explicitly uploaded but mentioned in original structure txt)

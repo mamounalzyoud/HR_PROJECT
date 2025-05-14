@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Benefit{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">Add New Benefit</h1>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post" action="{{ url_for('benefits.add_benefit') }}">
+            <div class="mb-3">
+                <label for="user_id" class="form-label">Employee <span class="text-danger">*</span></label>
+                <select class="form-select" id="user_id" name="user_id" required>
+                    <option value="" disabled selected>Select Employee...</option>
+                    {% for u in users %}
+                    <option value="{{ u['id'] }}">{{ u['full_name'] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="benefit_type" class="form-label">Benefit Type <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="benefit_type" name="benefit_type" required>
+            </div>
+            <div class="mb-3">
+                <label for="details" class="form-label">Details</label>
+                <textarea class="form-control" id="details" name="details" rows="2"></textarea>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="end_date" class="form-label">End Date (Optional)</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date">
+                </div>
+            </div>
+             <div class="mb-3">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="active" selected>Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Benefit</button>
+            <a href="{{ url_for('benefits.manage_benefits') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

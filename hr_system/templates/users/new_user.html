@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Add New User{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">Add New User</h1>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post" action="{{ url_for('users.new_user') }}">
+            {# Login Info #}
+            <h5 class="mb-3 text-primary"><i class="fas fa-info-circle me-1"></i> Login Information</h5>
+            <div class="row">
+                <div class="col-md-6 mb-3"><label for="full_name" class="form-label">Full Name <span class="text-danger">*</span></label><input type="text" class="form-control" id="full_name" name="full_name" value="{{ request.form.full_name if request.form else '' }}" required></div>
+                <div class="col-md-6 mb-3"><label for="username" class="form-label">Username <span class="text-danger">*</span></label><input type="text" class="form-control" id="username" name="username" value="{{ request.form.username if request.form else '' }}" required></div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3"><label for="email" class="form-label">Email <span class="text-danger">*</span></label><input type="email" class="form-control" id="email" name="email" value="{{ request.form.email if request.form else '' }}" required></div>
+                <div class="col-md-6 mb-3"><label for="password" class="form-label">Password <span class="text-danger">*</span></label><input type="password" class="form-control" id="password" name="password" required></div>
+            </div>
+            <hr>
+            {# Job Info #}
+            <h5 class="mb-3 text-primary"><i class="fas fa-briefcase me-1"></i> Job Information</h5>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="role" class="form-label">Role <span class="text-danger">*</span></label>
+                    <select class="form-select" id="role" name="role" required>
+                        <option value="employee" {% if (request.form and request.form.role == 'employee') or not request.form %}selected{% endif %}>Employee</option>
+                        <option value="manager" {% if request.form and request.form.role == 'manager' %}selected{% endif %}>Manager</option>
+                        <option value="admin" {% if request.form and request.form.role == 'admin' %}selected{% endif %}>Admin</option>
+                        <option value="hr" {% if request.form and request.form.role == 'hr' %}selected{% endif %}>HR</option>
+                        <option value="it" {% if request.form and request.form.role == 'it' %}selected{% endif %}>IT</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3"><label for="department" class="form-label">Department</label><input type="text" class="form-control" id="department" name="department" value="{{ request.form.department if request.form else '' }}"></div>
+                <div class="col-md-4 mb-3"><label for="hire_date" class="form-label">Hire Date</label><input type="date" class="form-control" id="hire_date" name="hire_date" value="{{ request.form.hire_date if request.form else '' }}"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="manager_id" class="form-label">Reports To (Manager)</label>
+                    <select class="form-select" id="manager_id" name="manager_id">
+                        <option value="">-- Select Manager --</option>
+                        {% for manager in managers %}
+                            <option value="{{ manager['id'] }}" {% if request.form and request.form.manager_id == manager['id']|string %}selected{% endif %}>{{ manager['full_name'] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                 <div class="col-md-6 mb-3">
+                    <label for="annual_leave_entitlement" class="form-label">Annual Leave Entitlement (Days)</label>
+                    <input type="number" step="0.5" class="form-control" id="annual_leave_entitlement" name="annual_leave_entitlement" value="{{ request.form.annual_leave_entitlement if request.form else '20.0' }}" min="0">
+                </div>
+            </div>
+            {# --- Onboarding Checklist Dropdown --- #}
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="onboarding_checklist_id" class="form-label">Assign Onboarding Checklist</label>
+                    <select class="form-select" id="onboarding_checklist_id" name="onboarding_checklist_id">
+                        <option value="">-- None --</option> {# Allows admin to explicitly choose no checklist #}
+                        {% for checklist_item in checklists %}
+                            <option value="{{ checklist_item['id'] }}" 
+                                    {% if (request.form and request.form.onboarding_checklist_id == checklist_item['id']|string) or 
+                                         (not request.form and default_checklist_id and default_checklist_id == checklist_item['id']) %}selected{% endif %}>
+                                {{ checklist_item['name'] }} {% if checklist_item['is_default'] %}(Default){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                     <small class="form-text text-muted">If no specific checklist is chosen, the system default (if set) will be assigned.</small>
+                </div>
+            </div>
+            {# --- END Onboarding --- #}
+             <hr>
+            {# Contact Info #}
+            <h5 class="mb-3 text-primary"><i class="fas fa-address-book me-1"></i> Contact Information</h5>
+             <div class="row">
+                <div class="col-md-6 mb-3"><label for="phone_number" class="form-label">Phone Number</label><input type="tel" class="form-control" id="phone_number" name="phone_number" value="{{ request.form.phone_number if request.form else '' }}"></div>
+            </div>
+             <div class="mb-3"><label for="address" class="form-label">Address</label><textarea class="form-control" id="address" name="address" rows="2">{{ request.form.address if request.form else '' }}</textarea></div>
+             <hr>
+             {# Emergency Contact #}
+            <h5 class="mb-3 text-primary"><i class="fas fa-exclamation-circle me-1"></i> Emergency Contact</h5>
+             <div class="row">
+                <div class="col-md-6 mb-3"><label for="emergency_contact_name" class="form-label">Name</label><input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name" value="{{ request.form.emergency_contact_name if request.form else '' }}"></div>
+                <div class="col-md-6 mb-3"><label for="emergency_contact_phone" class="form-label">Phone</label><input type="tel" class="form-control" id="emergency_contact_phone" name="emergency_contact_phone" value="{{ request.form.emergency_contact_phone if request.form else '' }}"></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">Create User</button>
+            <a href="{{ url_for('users.view_users') }}" class="btn btn-secondary mt-3">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

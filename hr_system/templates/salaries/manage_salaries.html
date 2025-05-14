@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Salaries{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">Manage Employee Salaries</h1>
+    {# Optional: Add button for bulk actions or reports if needed later #}
+</div>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Employee Name</th>
+                        <th>Department</th>
+                        <th>Role</th>
+                        <th>Current Salary</th>
+                        <th>Effective Date</th>
+                        {# <th>Salary Last Updated</th> #}
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user_data in users_data %}
+                    <tr>
+                        <td>{{ user_data['full_name'] }}</td>
+                        <td>{{ user_data['department'] or 'N/A' }}</td>
+                        <td>{{ user_data['role'] | title }}</td>
+                        {# Display salary info if available #}
+                        <td>
+                            {% if user_data['basic_salary'] is not none %}
+                                {{ user_data['currency'] or '' }} {{ '%.2f' | format(user_data['basic_salary']) }} ({{ user_data['pay_frequency'] or 'N/A' }})
+                            {% else %}
+                                <span class="text-muted">Not Set</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user_data['effective_date'] or '<span class="text-muted">N/A</span>' | safe }}</td> {# Date-only field #}
+                        {# Example if salary_updated_at_utc_str was fetched
+                        <td>
+                            {% if user_data.salary_updated_at_utc_str %}
+                                {{ user_data.salary_updated_at_utc_str | localdatetime }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        #}
+                        <td>
+                            <a href="{{ url_for('salaries.edit_employee_salary', user_id=user_data['id']) }}" class="btn btn-sm btn-primary py-0">
+                                <i class="fas fa-edit me-1"></i> Manage
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-muted">No employees found or eligible for salary management.</td></tr> {# Adjust colspan if new column added #}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

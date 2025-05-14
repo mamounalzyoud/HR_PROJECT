@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Tasks for {{ checklist['name'] }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">Manage Tasks for: <strong>{{ checklist['name'] }}</strong></h1>
+    <div>
+        <a href="{{ url_for('onboarding.create_task', checklist_id=checklist['id']) }}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> New Task
+        </a>
+        <a href="{{ url_for('onboarding.manage_checklists') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Checklists
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        {% if tasks %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Order</th>
+                            <th>Task Name</th>
+                            <th>Responsible</th>
+                            <th>Due Days</th>
+                            <th>Depends On</th>
+                            <th>Description</th>
+                            <th style="min-width: 200px;">Actions</th> {# Increased min-width for more buttons #}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task_item in tasks %} {# tasks should be pre-sorted by display_order in the backend #}
+                        <tr>
+                            <td>
+                                {{ task_item['display_order'] }}
+                            </td>
+                            <td>{{ task_item['task_name'] }}</td>
+                            <td>{{ task_item['responsible_role'] }}</td>
+                            <td>{{ task_item['due_days_after_start'] if task_item['due_days_after_start'] is not none else 'N/A' }}</td>
+                            <td>
+                                {% if task_item['prerequisite_task_name'] %}
+                                    <span class="badge bg-info text-dark" title="Depends on: {{ task_item['prerequisite_task_name'] }}">
+                                        <i class="fas fa-link"></i> {{ task_item['prerequisite_task_name'] | truncate(20) }}
+                                    </span>
+                                {% else %}
+                                    <small class="text-muted fst-italic">None</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ task_item['description'] | truncate(40) if task_item['description'] else 'N/A' }}</td>
+                            <td>
+                                {# Move Up/Down Buttons #}
+                                <form method="post" action="{{ url_for('onboarding.move_task_up', task_id=task_item['id']) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-1 me-1" title="Move Up" {% if loop.first %}disabled{% endif %}>
+                                        <i class="fas fa-arrow-up"></i>
+                                    </button>
+                                </form>
+                                <form method="post" action="{{ url_for('onboarding.move_task_down', task_id=task_item['id']) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-1 me-1" title="Move Down" {% if loop.last %}disabled{% endif %}>
+                                        <i class="fas fa-arrow-down"></i>
+                                    </button>
+                                </form>
+
+                                {# Edit/Delete Buttons #}
+                                {% if task_item and task_item['id'] is defined and task_item['id'] is not none %}
+                                    {% set current_id_as_int = task_item['id'] | int(-1) %} 
+                                    {% if current_id_as_int > 0 %}
+                                        <a href="{{ url_for('onboarding.alter_onboarding_task', task_id_val=current_id_as_int) }}" class="btn btn-sm btn-info py-0 me-1" title="Edit">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        <form method="post" action="{{ url_for('onboarding.delete_task', task_id=current_id_as_int) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete task \'{{ task_item['task_name'] }}\'?');">
+                                            <button type="submit" class="btn btn-sm btn-danger py-0" title="Delete">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-danger" style="font-size:0.8em;">Error: Invalid Task ID ({{ task_item['id'] }}) for URL.</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-danger" style="font-size:0.8em;">Error: Task ID is missing or None for task "{{ task_item['task_name'] }}".</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %} 
+            <p class="text-center text-muted mt-3">No tasks defined for this checklist yet. Click "New Task" to add one.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

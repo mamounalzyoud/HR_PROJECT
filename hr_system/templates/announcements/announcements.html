@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Announcements{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">Announcements</h1>
+    {# Show 'New Announcement' button only to managers/admins #}
+    {% if g.user['role'] in ['admin', 'manager'] %}
+    <a href="{{ url_for('announcements.new_announcement') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> New Announcement
+    </a>
+    {% endif %}
+</div>
+
+{% if announcements %}
+    {% for ann in announcements %}
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{{ ann['title'] }}</h5>
+            <div>
+                <small class="text-muted me-2">
+                    By: {{ ann['creator_name'] }} | 
+                    {# Apply localdatetime filter #}
+                    {{ ann['created_at'] | localdatetime(format_str='%B %d, %Y at %I:%M %p') }}
+                </small>
+                {# Show delete button only to admin or the creator if they are manager/admin #}
+                {% if g.user['role'] == 'admin' or (g.user['role'] == 'manager' and ann['created_by'] == g.user['id']) %}
+                <form method="post" action="{{ url_for('announcements.delete_announcement', announcement_id=ann['id']) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this announcement?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger py-0" title="Delete"><i class="fas fa-trash"></i></button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body">
+            {# Use safe filter if content might contain HTML, or pre-wrap for plain text formatting #}
+            <p class="card-text" style="white-space: pre-wrap;">{{ ann['content'] }}</p> 
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="alert alert-info text-center">No announcements found.</div>
+{% endif %}
+
+{% endblock %}

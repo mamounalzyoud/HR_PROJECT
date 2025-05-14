@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Salary Component{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">Add Salary Component for: {{ employee['full_name'] }}</h1>
+
+<div class="card shadow-sm">
+     <div class="card-header">
+        Add Allowance or Deduction
+    </div>
+    <div class="card-body">
+        <form method="post" action="{{ url_for('salaries.add_salary_component', user_id=employee['id']) }}">
+            {# -- Component Details -- #}
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="component_type" class="form-label">Component Type <span class="text-danger">*</span></label>
+                    <select class="form-select" id="component_type" name="component_type" required>
+                        <option value="" disabled selected>Select Type...</option>
+                        <option value="allowance">Allowance</option>
+                        <option value="deduction">Deduction</option>
+                    </select>
+                </div>
+                 <div class="col-md-6 mb-3">
+                    <label for="component_name" class="form-label">Component Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="component_name" name="component_name" placeholder="e.g., Housing, Transport, Provident Fund" required>
+                </div>
+            </div>
+
+            {# -- Calculation Type Selection -- #}
+            <div class="mb-3">
+                <label for="calculation_type" class="form-label">Calculation Type <span class="text-danger">*</span></label>
+                <select class="form-select" id="calculation_type" name="calculation_type" required onchange="toggleCalculationFields()">
+                    <option value="fixed" selected>Fixed Amount</option>
+                    <option value="percentage">Percentage</option>
+                </select>
+            </div>
+
+            {# -- Fields for Fixed Amount -- #}
+            <div id="fixed_fields">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="amount_fixed" class="form-label">Amount <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" class="form-control" id="amount_fixed" name="amount_fixed">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="employer_contribution_fixed" class="form-label">Employer Contribution (Fixed, Optional)</label>
+                        <input type="number" step="0.01" class="form-control" id="employer_contribution_fixed" name="employer_contribution_fixed" placeholder="e.g., Company share for insurance">
+                    </div>
+                </div>
+            </div>
+
+            {# -- Fields for Percentage -- #}
+            <div id="percentage_fields" style="display: none;">
+                 <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="percentage_rate" class="form-label">Percentage Rate (%) <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" class="form-control" id="percentage_rate" name="percentage_rate" placeholder="e.g., 7.5">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                         <label for="calculation_basis" class="form-label">Basis <span class="text-danger">*</span></label>
+                         <select class="form-select" id="calculation_basis" name="calculation_basis">
+                             <option value="basic_salary" selected>Basic Salary</option>
+                             {# <option value="gross_pay">Gross Pay</option> #} {# Gross pay basis is complex to implement reliably here #}
+                             {# Add other basis options if needed #}
+                         </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="upper_limit" class="form-label">Salary Cap (Optional)</label>
+                        <input type="number" step="0.01" class="form-control" id="upper_limit" name="upper_limit" placeholder="Max salary for calculation">
+                    </div>
+                 </div>
+                 <div class="row">
+                     <div class="col-md-6 mb-3">
+                        <label for="employer_contribution_percent" class="form-label">Employer Contribution (%, Optional)</label>
+                        <input type="number" step="0.01" class="form-control" id="employer_contribution_percent" name="employer_contribution_percent" placeholder="e.g., Company share %">
+                    </div>
+                 </div>
+            </div>
+
+            {# -- Common Fields -- #}
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="frequency" class="form-label">Frequency <span class="text-danger">*</span></label>
+                    <select class="form-select" id="frequency" name="frequency" required>
+                        <option value="Monthly" selected>Monthly</option>
+                        <option value="Annually">Annually</option>
+                        <option value="One-Time">One-Time</option>
+                    </select>
+                </div>
+                 <div class="col-md-6 mb-3">
+                     <label class="form-label">&nbsp;</label> {# Spacer #}
+                     <div class="form-check">
+                      <input class="form-check-input" type="checkbox" value="on" id="is_statutory" name="is_statutory">
+                      <label class="form-check-label" for="is_statutory">
+                        Is Statutory Deduction? (e.g., Tax, SS)
+                      </label>
+                    </div>
+                 </div>
+            </div>
+             <div class="mb-3">
+                <label for="notes" class="form-label">Notes (Optional)</label>
+                <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-success">Add Component</button>
+            <a href="{{ url_for('salaries.edit_employee_salary', user_id=employee['id']) }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Simple JS to show/hide fields based on calculation type
+    function toggleCalculationFields() {
+        const calcType = document.getElementById('calculation_type').value;
+        const fixedFields = document.getElementById('fixed_fields');
+        const percentageFields = document.getElementById('percentage_fields');
+        const amountInput = document.getElementById('amount_fixed');
+        const percentageInput = document.getElementById('percentage_rate');
+        const basisInput = document.getElementById('calculation_basis');
+
+        if (calcType === 'fixed') {
+            fixedFields.style.display = 'block';
+            percentageFields.style.display = 'none';
+            amountInput.required = true; // Make fixed amount required
+            percentageInput.required = false; // Make percentage fields not required
+            basisInput.required = false;
+        } else if (calcType === 'percentage') {
+            fixedFields.style.display = 'none';
+            percentageFields.style.display = 'block';
+            amountInput.required = false; // Make fixed amount not required
+            percentageInput.required = true; // Make percentage fields required
+            basisInput.required = true;
+        }
+    }
+    // Run on page load in case of validation errors re-rendering the page
+    document.addEventListener('DOMContentLoaded', toggleCalculationFields);
+</script>
+{% endblock %}

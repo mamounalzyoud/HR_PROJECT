@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">User Management</h1>
+    <a href="{{ url_for('users.new_user') }}" class="btn btn-primary"><i class="fas fa-user-plus me-1"></i> Add New User</a>
+</div>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Full Name</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Dept.</th>
+                        <th>Manager</th> {# Added Manager Column #}
+                        <th>Hired</th>
+                        {# <th>Registered At</th> #}
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>{{ u['id'] }}</td>
+                        <td>{{ u['full_name'] }}</td>
+                        <td>{{ u['username'] }}</td>
+                        <td>{{ u['email'] }}</td>
+                        <td>{{ u['role'] | title }}</td>
+                        <td>{{ u['department'] or 'N/A' }}</td>
+                        <td>{{ u['manager_name'] or 'N/A' }}</td> {# Display Manager Name #}
+                        <td>{{ u['hire_date'] or 'N/A' }}</td> {# Date-only field #}
+                        {# Example if created_at_utc_str was fetched
+                        <td>
+                            {% if u['created_at_utc_str'] %}
+                                {{ u['created_at_utc_str'] | localdatetime }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        #}
+                        <td>
+                            <a href="{{ url_for('users.edit_user', user_id=u['id']) }}" class="btn btn-sm btn-info py-0 me-1" title="Edit"><i class="fas fa-edit"></i></a>
+                            {% set admin_count = users | selectattr('role', 'equalto', 'admin') | list | length %}
+                            {% if u['role'] != 'admin' or admin_count > 1 %}
+                            <form method="post" action="{{ url_for('users.delete_user', user_id=u['id']) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete {{ u['full_name'] }}? This cannot be undone.');">
+                                <button type="submit" class="btn btn-sm btn-danger py-0" title="Delete"><i class="fas fa-trash"></i></button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted">No users found.</td> {# Updated colspan if new column added #}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

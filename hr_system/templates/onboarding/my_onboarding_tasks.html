@@ -1,0 +1,380 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">{{ page_title }}</h1>
+    {% if not is_own_view and g.user.role == 'admin' %}
+        <a href="{{ url_for('onboarding.admin_tracking_view') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Back to Tracking
+        </a>
+    {% elif not is_own_view and g.user.role == 'manager' %}
+         <a href="{{ url_for('onboarding.responsible_tasks_view') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Back to My Responsible Tasks
+        </a>
+    {% endif %}
+</div>
+
+{% if employee_tasks %}
+    {% for checklist_name, tasks_in_checklist in employee_tasks | groupby('checklist_name') %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Checklist: {{ checklist_name }}</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 35%;">Task Name</th>
+                            <th style="width: 15%;">Responsible</th>
+                            <th style="width: 10%;">Due Date</th>
+                            <th style="width: 10%;">Status</th>
+                            <th style="width: 15%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks_in_checklist %}
+                        <tr class="{{ 'table-light text-muted' if not task.is_actionable and task.status == 'Pending' else '' }}">
+                            <td>
+                                <strong>{{ task['task_name'] }}</strong>
+                                {% if not task.is_actionable and task.status == 'Pending' and task.prerequisite_unmet_name %}
+                                    <small class="d-block text-danger fst-italic mt-1" title="This task is locked until '{{ task.prerequisite_unmet_name }}' is completed.">
+                                        <i class="fas fa-lock me-1"></i>Locked
+                                    </small>
+                                {% endif %}
+                            </td>
+                            <td>{{ task['responsible_role'] }}</td>
+                            <td>
+                                {% set due_date_class = '' %}
+                                {% if task.status == 'Pending' and task.due_date_str != 'N/A' and task.due_date_str != 'Invalid Hire Date' %}
+                                    {% if task.due_date_str < today_date_str %}
+                                        {% set due_date_class = 'text-danger fw-bold' %}
+                                    {% elif task.due_date_str <= due_soon_date_str %}
+                                        {% set due_date_class = 'text-warning fw-bold' %}
+                                    {% endif %}
+                                {% endif %}
+                                <span class="{{ due_date_class }}">
+                                    {{ task['due_date_str'] }}
+                                    {% if due_date_class == 'text-danger fw-bold' %}(Overdue){% endif %}
+                                    {% if due_date_class == 'text-warning fw-bold' %}(Due Soon){% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if task['status'] == 'Completed' else ('warning text-dark' if task['status'] == 'Pending' else ('secondary' if task['status'] == 'N/A' else 'info')) }}">
+                                    {{ task['status'] }}
+                                </span>
+                                {% if task['completed_date_utc_str'] %} {# Use the new _utc_str variable #}
+                                    <small class="d-block text-muted">{{ task['completed_date_utc_str'] | localdatetime(format_str='%Y-%m-%d') }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-primary py-0"
+                                        data-bs-toggle="modal" data-bs-target="#taskDetailModal"
+                                        data-status-id="{{ task.status_id }}"
+                                        data-task-name="{{ task.task_name }}"
+                                        data-task-description="{{ task.description or '' }}"
+                                        data-responsible-role="{{ task.responsible_role }}"
+                                        data-due-date="{{ task.due_date_str }}"
+                                        data-current-status="{{ task.status }}"
+                                        data-notes="{{ task.notes or '' }}"
+                                        data-is-actionable="{{ 'true' if task.is_actionable else 'false' }}"
+                                        data-prerequisite-name="{{ task.prerequisite_unmet_name or '' }}"
+                                        data-employee-name="{{ task.employee_full_name }}"
+                                        data-employee-id="{{ task.employee_user_id }}"
+                                        data-employee-manager-id = "{{ task.employee_manager_id or ''}}"
+                                        data-all-template-attachments='{{ task.template_attachments | list | tojson }}'
+                                        data-all-user-submissions='{{ task.user_submissions | list | tojson }}'
+                                        data-all-comments='{{ task.comments | list | tojson }}'
+                                        title="View/Manage Task">
+                                    <i class="fas fa-eye me-1"></i> View/Manage
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="alert alert-info text-center">
+        {% if is_own_view %}
+            You have no onboarding tasks assigned at the moment, or your onboarding is complete.
+        {% else %}
+            This employee has no onboarding tasks assigned or their onboarding is complete.
+        {% endif %}
+    </div>
+{% endif %}
+
+{# Modal remains the same, but ensure the JavaScript part handles the created_at_utc_str for comments #}
+<div class="modal fade" id="taskDetailModal" tabindex="-1" aria-labelledby="taskDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title" id="taskDetailModalLabel">Task Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h4 id="modalTaskName" class="mb-3"></h4>
+                <p><strong>Employee:</strong> <span id="modalEmployeeName"></span></p>
+                <p><strong>Responsible:</strong> <span id="modalResponsibleRole"></span></p>
+                <p><strong>Due Date:</strong> <span id="modalDueDate"></span></p>
+                <p><strong>Status:</strong> <span id="modalCurrentStatus" class="badge"></span></p>
+
+                <div class="mb-3">
+                    <h6><i class="fas fa-info-circle me-1 text-primary"></i>Description:</h6>
+                    <p id="modalTaskDescription" style="white-space: pre-wrap;"></p>
+                </div>
+
+                <div id="modalPrerequisiteInfo" class="alert alert-warning d-none" role="alert">
+                    <i class="fas fa-lock me-1"></i> This task is locked. Prerequisite task "<span id="modalPrerequisiteName"></span>" must be completed first.
+                </div>
+
+                <hr>
+                <h6><i class="fas fa-paperclip me-1 text-secondary"></i>Task Resources (Templates)</h6>
+                <ul id="modalTemplateAttachmentsList" class="list-group list-group-flush mb-3">
+                    </ul>
+
+                <hr>
+                <h6><i class="fas fa-upload me-1 text-success"></i>My Submissions</h6>
+                <ul id="modalUserSubmissionsList" class="list-group list-group-flush mb-3">
+                    </ul>
+
+                <div id="modalActionsSection">
+                    <hr>
+                    <h6><i class="fas fa-edit me-1 text-info"></i>Update Task / Add Note</h6>
+                    <form id="modalUpdateStatusForm" method="post" action=""> <div class="mb-3">
+                            <label for="modalNotes" class="form-label">Notes:</label>
+                            <textarea class="form-control form-control-sm" id="modalNotes" name="notes" rows="3"></textarea>
+                        </div>
+                        <div id="modalActionButtons" class="d-flex justify-content-start gap-2">
+                            </div>
+                    </form>
+
+                    <h6 class="mt-3"><i class="fas fa-file-upload me-1 text-info"></i>Upload File for this Task</h6>
+                    <form id="modalUploadForm" method="post" action="" enctype="multipart/form-data"> <div class="input-group input-group-sm">
+                            <input type="file" class="form-control form-control-sm" name="user_task_attachment" id="modal_user_task_attachment" required>
+                            <button class="btn btn-sm btn-outline-info" type="submit"><i class="fas fa-upload"></i> Upload</button>
+                        </div>
+                        <small class="form-text text-muted">Allowed: {{ ALLOWED_EXTENSIONS | join(', ') }}. Max 16MB.</small>
+                    </form>
+                </div>
+
+                <hr class="mt-4">
+                <h6><i class="fas fa-comments me-1 text-primary"></i>Discussion / Comments</h6>
+                <div id="modalCommentsList" class="mb-3" style="max-height: 200px; overflow-y: auto;">
+                    </div>
+                <form id="modalAddCommentForm" method="post" action=""> <div class="mb-2">
+                        <label for="modalCommentText" class="form-label visually-hidden">Add a comment</label>
+                        <textarea class="form-control form-control-sm" id="modalCommentText" name="comment_text" rows="2" placeholder="Add a comment..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-outline-primary"><i class="fas fa-paper-plane me-1"></i>Post Comment</button>
+                </form>
+                </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var taskDetailModal = document.getElementById('taskDetailModal');
+    if (taskDetailModal) {
+        taskDetailModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+
+            var statusId = button.getAttribute('data-status-id');
+            var taskName = button.getAttribute('data-task-name');
+            var taskDescription = button.getAttribute('data-task-description');
+            var responsibleRole = button.getAttribute('data-responsible-role');
+            var dueDate = button.getAttribute('data-due-date');
+            var currentStatus = button.getAttribute('data-current-status');
+            var notes = button.getAttribute('data-notes');
+            var isActionable = button.getAttribute('data-is-actionable') === 'true';
+            var prerequisiteName = button.getAttribute('data-prerequisite-name');
+            var employeeName = button.getAttribute('data-employee-name');
+            var employeeId = button.getAttribute('data-employee-id');
+            var employeeManagerId = button.getAttribute('data-employee-manager-id');
+
+            var templateAttachments = JSON.parse(button.getAttribute('data-all-template-attachments') || '[]');
+            var userSubmissions = JSON.parse(button.getAttribute('data-all-user-submissions') || '[]');
+            var comments = JSON.parse(button.getAttribute('data-all-comments') || '[]'); 
+
+            var modalTitle = taskDetailModal.querySelector('.modal-title');
+            var modalTaskNameElem = taskDetailModal.querySelector('#modalTaskName');
+            var modalEmployeeNameElem = taskDetailModal.querySelector('#modalEmployeeName');
+            var modalResponsibleRoleElem = taskDetailModal.querySelector('#modalResponsibleRole');
+            var modalDueDateElem = taskDetailModal.querySelector('#modalDueDate');
+            var modalCurrentStatusElem = taskDetailModal.querySelector('#modalCurrentStatus');
+            var modalTaskDescriptionElem = taskDetailModal.querySelector('#modalTaskDescription');
+            var modalNotesTextarea = taskDetailModal.querySelector('#modalNotes');
+            var modalTemplateAttachmentsList = taskDetailModal.querySelector('#modalTemplateAttachmentsList');
+            var modalUserSubmissionsList = taskDetailModal.querySelector('#modalUserSubmissionsList');
+            var modalCommentsList = taskDetailModal.querySelector('#modalCommentsList'); 
+            var modalAddCommentForm = taskDetailModal.querySelector('#modalAddCommentForm'); 
+
+            var modalPrerequisiteInfo = taskDetailModal.querySelector('#modalPrerequisiteInfo');
+            var modalPrerequisiteNameElem = taskDetailModal.querySelector('#modalPrerequisiteName');
+
+            var modalActionsSection = taskDetailModal.querySelector('#modalActionsSection');
+            var modalActionButtons = taskDetailModal.querySelector('#modalActionButtons');
+            var modalUpdateStatusForm = taskDetailModal.querySelector('#modalUpdateStatusForm');
+            var modalUploadForm = taskDetailModal.querySelector('#modalUploadForm');
+
+            modalTitle.textContent = 'Task: ' + taskName;
+            modalTaskNameElem.textContent = taskName;
+            modalEmployeeNameElem.textContent = employeeName;
+            modalResponsibleRoleElem.textContent = responsibleRole;
+            modalDueDateElem.textContent = dueDate;
+
+            modalCurrentStatusElem.textContent = currentStatus;
+            modalCurrentStatusElem.className = 'badge';
+            if (currentStatus === 'Completed') modalCurrentStatusElem.classList.add('bg-success');
+            else if (currentStatus === 'Pending') modalCurrentStatusElem.classList.add('bg-warning', 'text-dark');
+            else if (currentStatus === 'N/A') modalCurrentStatusElem.classList.add('bg-secondary');
+            else modalCurrentStatusElem.classList.add('bg-info');
+
+            modalTaskDescriptionElem.textContent = taskDescription || 'No description provided.';
+            modalNotesTextarea.value = notes || '';
+
+            modalTemplateAttachmentsList.innerHTML = '';
+            if (templateAttachments.length > 0) {
+                templateAttachments.forEach(function(att) {
+                    var listItem = document.createElement('li');
+                    listItem.className = 'list-group-item d-flex justify-content-between align-items-center py-1';
+                    var iconClass = att.attachment_type === 'template_link' ? 'fas fa-link text-primary' : 'fas fa-paperclip text-secondary';
+                    var link = document.createElement('a');
+                    link.href = "{{ url_for('onboarding.download_task_attachment', attachment_id=0) }}".replace('0', att.id);
+                    link.target = '_blank';
+                    link.title = att.attachment_type === 'template_link' ? att.url : "Download " + att.file_name;
+                    link.innerHTML = `<i class="${iconClass} me-2"></i>${(att.file_name || att.url).substring(0, 60)}${(att.file_name || att.url).length > 60 ? '...' : ''}`;
+                    listItem.appendChild(link);
+                    modalTemplateAttachmentsList.appendChild(listItem);
+                });
+            } else {
+                modalTemplateAttachmentsList.innerHTML = '<li class="list-group-item text-muted small py-1">No template resources for this task.</li>';
+            }
+
+            modalUserSubmissionsList.innerHTML = '';
+            if (userSubmissions.length > 0) {
+                userSubmissions.forEach(function(sub_att) {
+                    var listItem = document.createElement('li');
+                    listItem.className = 'list-group-item d-flex justify-content-between align-items-center py-1';
+                    var linkDiv = document.createElement('div');
+                    var link = document.createElement('a');
+                    link.href = "{{ url_for('onboarding.download_task_attachment', attachment_id=0) }}".replace('0', sub_att.id);
+                    link.target = '_blank';
+                    link.title = "Download " + sub_att.file_name;
+                    link.innerHTML = `<i class="fas fa-cloud-download-alt me-2 text-success"></i>${sub_att.file_name.substring(0,50)}${sub_att.file_name.length > 50 ? '...' : ''}`;
+                    linkDiv.appendChild(link);
+                    listItem.appendChild(linkDiv);
+
+                    var deleteForm = document.createElement('form');
+                    deleteForm.method = 'post';
+                    deleteForm.action = "{{ url_for('onboarding.delete_user_task_attachment', attachment_id=0) }}".replace('0', sub_att.id);
+                    deleteForm.className = 'd-inline ms-2';
+                    deleteForm.onsubmit = function() { return confirm('Are you sure you want to delete this submission?'); };
+                    var deleteButton = document.createElement('button');
+                    deleteButton.type = 'submit';
+                    deleteButton.className = 'btn btn-xs btn-outline-danger p-0 px-1';
+                    deleteButton.title = 'Delete submission';
+                    deleteButton.innerHTML = '<i class="fas fa-times"></i>';
+                    deleteForm.appendChild(deleteButton);
+                    listItem.appendChild(deleteForm);
+                    modalUserSubmissionsList.appendChild(listItem);
+                });
+            } else {
+                modalUserSubmissionsList.innerHTML = '<li class="list-group-item text-muted small py-1">No submissions yet for this task.</li>';
+            }
+
+            modalCommentsList.innerHTML = '';
+            if (comments.length > 0) {
+                comments.forEach(function(comment) {
+                    var commentDiv = document.createElement('div');
+                    commentDiv.className = 'mb-2 p-2 border rounded bg-light shadow-sm';
+                    var commentHeader = document.createElement('small');
+                    commentHeader.className = 'text-muted d-block mb-1';
+                    // Ensure comment.created_at_utc_str is passed from Python if it's a string
+                    // If comment.created_at is already a JS-parsable date string (like ISO with Z), this is fine.
+                    let commentDateStr = comment.created_at_utc_str || comment.created_at; // Prefer _utc_str if available
+                    commentHeader.innerHTML = `<strong>${comment.commenter_name}</strong> on ${new Date(commentDateStr.includes('Z') ? commentDateStr : commentDateStr + 'Z').toLocaleString()}`; 
+                    var commentBody = document.createElement('p');
+                    commentBody.className = 'mb-0';
+                    commentBody.textContent = comment.comment_text;
+                    commentDiv.appendChild(commentHeader);
+                    commentDiv.appendChild(commentBody);
+                    modalCommentsList.appendChild(commentDiv);
+                });
+            } else {
+                modalCommentsList.innerHTML = '<p class="text-muted small">No comments yet.</p>';
+            }
+            modalCommentsList.scrollTop = modalCommentsList.scrollHeight;
+
+            if (!isActionable && currentStatus === 'Pending' && prerequisiteName) {
+                modalPrerequisiteNameElem.textContent = prerequisiteName;
+                modalPrerequisiteInfo.classList.remove('d-none');
+                modalActionsSection.classList.add('d-none');
+            } else {
+                modalPrerequisiteInfo.classList.add('d-none');
+                modalActionsSection.classList.remove('d-none');
+            }
+
+            modalUpdateStatusForm.action = "{{ url_for('onboarding.update_task_status', status_id=0) }}".replace('0', statusId);
+            modalUploadForm.action = "{{ url_for('onboarding.upload_task_instance_attachment', status_id=0) }}".replace('0', statusId);
+            modalAddCommentForm.action = "{{ url_for('onboarding.add_task_comment', status_id=0) }}".replace('0', statusId); 
+            modalAddCommentForm.querySelector('#modalCommentText').value = ''; 
+
+            modalActionButtons.innerHTML = '';
+            var canCurrentUserActionThisTask = false;
+            const currentUserId = parseInt("{{ g.user.id }}");
+            const currentUserRole = "{{ g.user.role }}";
+
+            if (currentUserRole === 'admin') {
+                canCurrentUserActionThisTask = true;
+            } else if (responsibleRole === 'Employee' && parseInt(employeeId) === currentUserId) {
+                canCurrentUserActionThisTask = true;
+            } else if (responsibleRole === 'Manager' && currentUserRole === 'manager' && parseInt(employeeManagerId) === currentUserId) {
+                canCurrentUserActionThisTask = true;
+            } else if (responsibleRole.toLowerCase() === currentUserRole && (currentUserRole === 'hr' || currentUserRole === 'it')) {
+                canCurrentUserActionThisTask = true;
+            }
+
+            if (isActionable && canCurrentUserActionThisTask) {
+                if (currentStatus === 'Pending') {
+                    modalActionButtons.innerHTML += `
+                        <button type="submit" name="new_status" value="Completed" class="btn btn-sm btn-success">
+                            <i class="fas fa-check"></i> Mark Complete
+                        </button>
+                        <button type="submit" name="new_status" value="N/A" class="btn btn-sm btn-outline-secondary">
+                            Mark N/A
+                        </button>`;
+                } else if (currentStatus === 'Completed' || currentStatus === 'N/A') {
+                    modalActionButtons.innerHTML += `
+                        <button type="submit" name="new_status" value="Pending" class="btn btn-sm btn-outline-warning">
+                            <i class="fas fa-undo"></i> Re-Open Task
+                        </button>`;
+                }
+                modalUploadForm.classList.remove('d-none');
+            } else if (isActionable && !canCurrentUserActionThisTask) {
+                 modalActionButtons.innerHTML = `<p class="text-muted small mb-0"><em>Actions managed by: ${responsibleRole}</em></p>`;
+                 modalUploadForm.classList.add('d-none');
+            } else if (!isActionable && currentStatus === 'Pending') {
+                 modalActionButtons.innerHTML = '<p class="text-muted small mb-0"><em>Task is locked by prerequisite.</em></p>';
+                 modalUploadForm.classList.add('d-none');
+            } else {
+                 modalActionButtons.innerHTML = '<p class="text-muted small mb-0"><em>No actions available.</em></p>';
+                 modalUploadForm.classList.add('d-none');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

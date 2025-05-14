@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Expense Claims{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">Manage Pending Expense Claims</h1>
+<p class="text-muted">Review and approve/reject pending claims submitted by your team.</p>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Submitted By</th>
+                        <th>Department</th>
+                        <th>Submitted At</th>
+                        <th>Expense Date</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Description</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for claim in claims %}
+                    <tr>
+                        <td>{{ claim['employee_name'] }}</td>
+                        <td>{{ claim['department'] or 'N/A' }}</td>
+                        <td>
+                            {% if claim['submitted_at_utc_str'] %}
+                                {{ claim['submitted_at_utc_str'] | localdatetime(format_str='%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>{{ claim['expense_date'] }}</td> {# Assuming expense_date is date-only #}
+                        <td>{{ claim['category'] }}</td>
+                        <td class="text-end">{{ claim['currency'] }} {{ '%.2f' | format(claim['amount']) }}</td>
+                        <td>{{ claim['description'] | truncate(50) }}</td>
+                        <td>
+                            <form method="post" action="{{ url_for('expenses.expense_action', claim_id=claim['id']) }}" class="d-inline">
+                                <input type="hidden" name="action" value="approve">
+                                <button type="submit" class="btn btn-sm btn-success py-0 me-1" title="Approve"><i class="fas fa-check"></i></button>
+                            </form>
+                            <form method="post" action="{{ url_for('expenses.expense_action', claim_id=claim['id']) }}" class="d-inline">
+                                <input type="hidden" name="action" value="reject">
+                                <button type="submit" class="btn btn-sm btn-danger py-0" title="Reject"><i class="fas fa-times"></i></button>
+                            </form>
+                            {# Optional: Add link/modal to view full details/receipt #}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="text-center text-muted">No pending expense claims to manage.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+ {# Optional: Add tabs/filters to view Approved/Rejected claims #}
+{% endblock %}

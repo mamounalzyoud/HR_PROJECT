@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}HR Portal{% endblock %} - HR System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Base Styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .sidebar {
+            width: 280px;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 1030; /* Ensures sidebar is above content but below modals/alerts if needed */
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            transition: width 0.3s ease;
+        }
+        .sidebar-header {
+            padding: 1.25rem 1.15rem;
+            text-align: center;
+            border-bottom: 1px solid #3a506b;
+            background-color: #22303f;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .sidebar-header h3 {
+            color: #ffffff;
+            margin-bottom: 0.3rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .sidebar-header h3 i {
+            color: #5dade2;
+            margin-right: 8px;
+        }
+        .sidebar-header .user-info {
+            margin-top: 0.5rem;
+        }
+        .sidebar-header .user-info p {
+            margin-bottom: 0.1rem;
+            font-weight: 500;
+            color: #eaf0f1;
+            font-size: 0.95rem;
+        }
+        .sidebar-header .user-info small {
+            color: #aab8c2;
+            font-size: 0.8rem;
+        }
+        .sidebar-nav {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 0.75rem 0;
+        }
+        .sidebar .nav-pills .nav-link,
+        .sidebar .dropdown-toggle {
+            color: #bdc3c7;
+            padding: 0.8rem 1.5rem;
+            margin: 0.15rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.9rem;
+            transition: all 0.25s ease-in-out;
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+            text-decoration: none;
+            background-color: transparent;
+            border: none;
+            width: calc(100% - 1.5rem);
+        }
+        .sidebar .nav-pills .nav-link i,
+        .sidebar .dropdown-toggle i {
+            width: 28px;
+            text-align: center;
+            margin-right: 0.9rem;
+            font-size: 1.05em;
+            opacity: 0.9;
+            transition: opacity 0.2s ease;
+        }
+        .sidebar .nav-pills .nav-link:hover,
+        .sidebar .dropdown-toggle:hover {
+            color: #ffffff;
+            background-color: #34495e;
+            transform: translateX(4px);
+        }
+        .sidebar .nav-pills .nav-link:hover i,
+        .sidebar .dropdown-toggle:hover i {
+            opacity: 1;
+        }
+        .sidebar .nav-pills .nav-link.active,
+        .sidebar .dropdown-toggle.active {
+            color: #ffffff;
+            background-color: #5dade2;
+            font-weight: 600;
+            box-shadow: 0 3px 7px rgba(41, 128, 185, 0.3);
+        }
+        .sidebar .nav-pills .nav-link.active i,
+        .sidebar .dropdown-toggle.active i {
+            opacity: 1;
+        }
+        .sidebar-heading {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #7f8c8d;
+            padding: 0.75rem 1.5rem;
+            margin-top: 1.25rem;
+            margin-bottom: 0.25rem;
+            letter-spacing: 0.5px;
+        }
+        .sidebar-footer {
+            padding: 1.25rem 1rem;
+            border-top: 1px solid #3a506b;
+            background-color: #22303f;
+        }
+        .sidebar-footer .btn {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .top-navbar {
+            margin-left: 280px; /* Same as sidebar width */
+            background-color: #ffffff;
+            padding: 0.5rem 1.5rem;
+            border-bottom: 1px solid #e0e0e0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            height: 60px; /* Fixed height */
+            display: flex;
+            justify-content: flex-end; /* Align items to the right */
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1020; /* Below sidebar but above main content scroll */
+            transition: margin-left 0.3s ease;
+        }
+        .top-navbar-guest {
+            margin-left: 0;
+            justify-content: center;
+        }
+
+        .main-content-logged-in {
+            margin-left: 280px; /* Width of the sidebar */
+            padding: 25px 30px;
+            padding-top: calc(25px + 60px); /* Adjust padding-top to account for sticky top-navbar */
+            min-height: 100vh;
+            transition: margin-left 0.3s ease;
+        }
+        .main-content-guest {
+            padding: 25px;
+            max-width: 500px;
+            margin: 50px auto;
+            padding-top: calc(25px + 60px);
+        }
+
+        .login-page-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(100vh - 60px);
+            padding: 1rem;
+            margin-top: 60px;
+        }
+        body > .main-content-guest.login-page-override {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: none !important;
+            padding-top: 0 !important;
+        }
+
+        .stat-card {
+            border-left-width: 4px;
+            border-radius: 0.375rem;
+            box-shadow: 0 0.15rem 0.45rem rgba(0,0,0,.06);
+            background-color: #fff;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0.3rem 0.8rem rgba(0,0,0,.09);
+        }
+        .stat-card .card-body { padding: 1.25rem; }
+        .stat-card .stat-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 0.3rem;
+        }
+        .stat-card .stat-value { font-size: 1.9rem; font-weight: 700; }
+
+        .flash-messages-container {
+            position: fixed;
+            top: 20px; /* Adjusted from 80px to be closer to top after top-navbar */
+            right: 20px;
+            z-index: 1056; /* Higher than top-navbar, potentially sidebar, but below modals */
+            width: auto;
+            max-width: 450px;
+        }
+        .flash-messages-container .alert { box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,.1); }
+        .table th { font-weight: 600; color: #343a40; }
+        .card { border: 1px solid #e0e0e0; }
+        .card-header h5 i { color: #5dade2; }
+
+        .sidebar-nav::-webkit-scrollbar { width: 6px; }
+        .sidebar-nav::-webkit-scrollbar-track { background: #2c3e50; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: #4a627a; border-radius: 3px; }
+        .sidebar-nav::-webkit-scrollbar-thumb:hover { background: #5dade2; }
+
+        .sidebar .dropdown-menu {
+            background-color: #34495e;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            padding: 0.25rem 0;
+            margin-top: 0.1rem !important; /* Bootstrap override */
+        }
+        .sidebar .dropdown-item {
+            color: #bdc3c7;
+            padding: 0.6rem 1.5rem;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+        }
+        .sidebar .dropdown-item i { width: 20px; margin-right: 0.7rem; opacity: 0.8; }
+        .sidebar .dropdown-item:hover,
+        .sidebar .dropdown-item:focus { color: #ffffff; background-color: #2c3e50; }
+        .sidebar .dropdown-item.active { background-color: #5dade2; color: #ffffff; }
+        .sidebar .dropdown-toggle::after {
+            margin-left: auto;
+            color: #bdc3c7;
+            transition: transform 0.2s ease-in-out;
+        }
+        .sidebar .dropdown-toggle:hover::after,
+        .sidebar .dropdown-toggle.active::after { color: #ffffff; }
+        .sidebar .dropdown-toggle[aria-expanded="true"]::after { transform: rotate(90deg); }
+
+        /* Notification Bell and Dropdown Styles */
+        .notification-bell-container {
+            position: relative; /* For badge positioning */
+        }
+        .notification-bell {
+            font-size: 1.25rem;
+            color: #555;
+            text-decoration: none;
+            padding: 0.5rem; /* Make it easier to click */
+        }
+        .notification-bell:hover {
+            color: #2c3e50;
+        }
+        .notification-badge {
+            position: absolute;
+            top: 0px;  /* Adjusted for better positioning on the bell */
+            right: 0px; /* Adjusted for better positioning on the bell */
+            font-size: 0.65rem;
+            padding: 0.2em 0.45em;
+            border-radius: 50%;
+            background-color: #dc3545;
+            color: white;
+            display: none; /* Hidden by default, shown by JS */
+        }
+        .notifications-dropdown-menu {
+            min-width: 320px; /* Give dropdown some width */
+            max-width: 400px;
+            max-height: 400px; /* Limit height and make scrollable */
+            overflow-y: auto;
+            padding: 0;
+            z-index: 1060; /* Ensure dropdown is above flash messages and other elements */
+        }
+        .notifications-dropdown-menu .dropdown-item {
+            white-space: normal; /* Allow text to wrap */
+            padding: 0.6rem 1rem; /* Adjusted padding */
+            font-size: 0.85rem;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer; /* Indicate items are clickable */
+        }
+         .notifications-dropdown-menu .dropdown-item.notification-item-unread {
+            background-color: #e9f5fe; /* Light blue for unread */
+        }
+        .notifications-dropdown-menu .dropdown-item:hover {
+            background-color: #e9ecef; /* Standard hover */
+        }
+        .notifications-dropdown-menu .dropdown-item:last-child {
+            border-bottom: none;
+        }
+        .notifications-dropdown-menu .dropdown-item .notification-message {
+            display: block;
+            color: #212529; /* Darker text for message */
+            font-weight: 500; /* Slightly bolder for unread, or normal */
+        }
+         .notifications-dropdown-menu .dropdown-item.notification-item-read .notification-message {
+            font-weight: normal;
+        }
+        .notifications-dropdown-menu .dropdown-item .notification-timestamp {
+            display: block;
+            font-size: 0.75rem;
+            color: #6c757d; /* Muted color for timestamp */
+            margin-top: 0.25rem;
+            white-space: nowrap; /* Prevent timestamp from wrapping */
+        }
+        .notifications-dropdown-menu .dropdown-header {
+            font-weight: bold;
+            padding: 0.5rem 1rem;
+            background-color: #f8f9fa;
+        }
+         .notifications-dropdown-menu .no-notifications {
+            padding: 1rem;
+            text-align: center;
+            color: #777;
+        }
+        .notifications-dropdown-menu .view-all-link {
+            display: block;
+            text-align: center;
+            padding: 0.75rem 1rem; /* Increased padding */
+            font-weight: bold;
+            background-color: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+            text-decoration: none;
+            color: #0d6efd; /* Bootstrap primary blue */
+        }
+        .notifications-dropdown-menu .view-all-link:hover {
+            background-color: #e9ecef;
+        }
+
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <div class="flash-messages-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show shadow-sm" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    {% if g.user %}
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fas fa-users-cog"></i> HR System</h3>
+            <div class="user-info mt-2">
+                <p>{{ g.user['full_name'] }}</p>
+                <small>({{ g.user['role'] | title }})</small>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <ul class="nav nav-pills flex-column mb-auto">
+                 <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}">
+                        <i class="fas fa-tachometer-alt fa-fw"></i>Dashboard
+                    </a>
+                </li>
+                 <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'attendance.view_attendance' %}active{% endif %}" href="{{ url_for('attendance.view_attendance') }}">
+                        <i class="fas fa-calendar-check fa-fw"></i>My Attendance
+                    </a>
+                </li>
+                 <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint.startswith('leaves.') and 'manage' not in request.endpoint %}active{% endif %}" href="{{ url_for('leaves.view_leaves') }}">
+                         <i class="fas fa-plane-departure fa-fw"></i>My Leaves
+                    </a>
+                </li>
+                 <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint.startswith('benefits.') and 'manage' not in request.endpoint %}active{% endif %}" href="{{ url_for('benefits.view_benefits') }}">
+                        <i class="fas fa-gift fa-fw"></i>My Benefits
+                    </a>
+                 </li>
+                 <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'payroll.view_my_payslips' or request.endpoint == 'payroll.view_payslip_detail' %}active{% endif %}" href="{{ url_for('payroll.view_my_payslips') }}">
+                        <i class="fas fa-file-invoice-dollar fa-fw"></i>My Payslips
+                    </a>
+                 </li>
+                  <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint.startswith('performance.') and 'manage' not in request.endpoint %}active{% endif %}" href="{{ url_for('performance.my_reviews') }}">
+                        <i class="fas fa-chart-line fa-fw"></i>My Performance
+                    </a>
+                 </li>
+                 <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint.startswith('expenses.') and 'manage' not in request.endpoint %}active{% endif %}" href="{{ url_for('expenses.view_my_expenses') }}">
+                        <i class="fas fa-receipt fa-fw"></i>My Expenses
+                    </a>
+                 </li>
+                 <li class="nav-item">
+                      <a class="nav-link
+                         {% if request.endpoint.startswith('onboarding.') and
+                               request.endpoint not in ['onboarding.manage_checklists',
+                                                        'onboarding.create_checklist',
+                                                        'onboarding.edit_checklist',
+                                                        'onboarding.manage_tasks',
+                                                        'onboarding.create_task',
+                                                        'onboarding.alter_onboarding_task',
+                                                        'onboarding.assign_onboarding_to_employee_view',
+                                                        'onboarding.admin_tracking_view']
+                                and request.endpoint != 'notifications_ui.list_notifications' %}active{% endif %}"
+                         href="{{ url_for('onboarding.index') }}">
+                         <i class="fas fa-tasks fa-fw"></i>My Onboarding
+                      </a>
+                 </li>
+                 <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint.startswith('announcements.') %}active{% endif %}" href="{{ url_for('announcements.view_announcements') }}">
+                        <i class="fas fa-bullhorn fa-fw"></i>Announcements
+                    </a>
+                 </li>
+
+                {% if g.user['role'] in ['admin', 'manager'] %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle
+                            {% if request.endpoint.startswith('attendance.team') or
+                                 request.endpoint.startswith('leaves.manage') or
+                                 (request.endpoint.startswith('performance.') and 'manage' in request.endpoint) or
+                                 request.endpoint.startswith('expenses.manage') or
+                                 request.endpoint.startswith('reports.')
+                            %}active{% endif %}"
+                            href="#" id="managementDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                             <i class="fas fa-users-cog fa-fw"></i>Management
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="managementDropdown">
+                            <li><a class="dropdown-item {% if request.endpoint == 'attendance.team_attendance' %}active{% endif %}" href="{{ url_for('attendance.team_attendance') }}"><i class="fas fa-users fa-fw"></i>Team Attendance</a></li>
+                            <li><a class="dropdown-item {% if request.endpoint == 'leaves.manage_leaves' %}active{% endif %}" href="{{ url_for('leaves.manage_leaves') }}"><i class="fas fa-user-clock fa-fw"></i>Manage Leaves</a></li>
+                            <li><a class="dropdown-item {% if request.endpoint.startswith('performance.') and 'manage' in request.endpoint %}active{% endif %}" href="{{ url_for('performance.manage_performance') }}"><i class="fas fa-clipboard-check fa-fw"></i>Team Performance</a></li>
+                            <li><a class="dropdown-item {% if request.endpoint == 'expenses.manage_expenses' %}active{% endif %}" href="{{ url_for('expenses.manage_expenses') }}"><i class="fas fa-cash-register fa-fw"></i>Manage Expenses</a></li>
+                            <li><a class="dropdown-item {% if request.endpoint.startswith('reports.') %}active{% endif %}" href="{{ url_for('reports.index') }}"><i class="fas fa-chart-bar fa-fw"></i>Reports</a></li>
+                        </ul>
+                    </li>
+                {% endif %}
+
+                {% if g.user['role'] == 'admin' %}
+                     <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle
+                            {% if request.endpoint.startswith('users.') or
+                                 (request.endpoint.startswith('benefits.') and 'manage' in request.endpoint) or
+                                 request.endpoint.startswith('salaries.') or
+                                 request.endpoint.startswith('payroll.') or
+                                 request.endpoint in ['onboarding.manage_checklists', 'onboarding.create_checklist', 'onboarding.edit_checklist', 'onboarding.manage_tasks', 'onboarding.create_task', 'onboarding.alter_onboarding_task', 'onboarding.assign_onboarding_to_employee_view', 'onboarding.admin_tracking_view']
+                            %}active{% endif %}"
+                            href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                             <i class="fas fa-shield-alt fa-fw"></i>Administration
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                            <li><a class="dropdown-item {% if request.endpoint.startswith('users.') %}active{% endif %}" href="{{ url_for('users.view_users') }}"><i class="fas fa-user-edit fa-fw"></i>User Management</a></li>
+                            <li><a class="dropdown-item {% if request.endpoint == 'benefits.manage_benefits' or request.endpoint == 'benefits.add_benefit' %}active{% endif %}" href="{{ url_for('benefits.manage_benefits') }}"><i class="fas fa-cogs fa-fw"></i>Manage Benefits</a></li>
+                            <li><a class="dropdown-item {% if request.endpoint.startswith('salaries.') %}active{% endif %}" href="{{ url_for('salaries.manage_salaries') }}"><i class="fas fa-money-bill-wave fa-fw"></i>Manage Salaries</a></li>
+                            <li><a class="dropdown-item {% if request.endpoint == 'payroll.view_payroll_runs' or request.endpoint == 'payroll.view_run_details' %}active{% endif %}" href="{{ url_for('payroll.view_payroll_runs') }}"><i class="fas fa-calculator fa-fw"></i>Payroll Runs</a></li>
+                            <li><hr class="dropdown-divider" style="border-color: #4a627a;"></li>
+                            <li><h6 class="dropdown-header" style="color: #95a5a6; font-size: 0.75rem;">Onboarding Admin</h6></li>
+                            <li><a class="dropdown-item {% if request.endpoint in ['onboarding.manage_checklists', 'onboarding.create_checklist', 'onboarding.edit_checklist', 'onboarding.manage_tasks', 'onboarding.create_task', 'onboarding.alter_onboarding_task'] %}active{% endif %}" href="{{ url_for('onboarding.manage_checklists') }}"><i class="fas fa-clipboard-list fa-fw"></i>Onboarding Setup</a></li>
+                            <li><a class="dropdown-item {% if request.endpoint == 'onboarding.assign_onboarding_to_employee_view' %}active{% endif %}" href="{{ url_for('onboarding.assign_onboarding_to_employee_view') }}"><i class="fas fa-user-tag fa-fw"></i>Assign Onboarding</a></li>
+                            <li><a class="dropdown-item {% if request.endpoint == 'onboarding.admin_tracking_view' %}active{% endif %}" href="{{ url_for('onboarding.admin_tracking_view') }}"><i class="fas fa-project-diagram fa-fw"></i>Track Onboarding</a></li>
+                        </ul>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+
+        <div class="sidebar-footer">
+            </div>
+    </div>
+
+    <div class="top-navbar {% if not g.user %}top-navbar-guest{% endif %}">
+        {% if g.user %}
+            <div class="dropdown notification-bell-container me-3">
+                <a href="#" class="notification-bell" id="notificationBellDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge" id="notification-count-badge">0</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end notifications-dropdown-menu shadow" aria-labelledby="notificationBellDropdown" id="notificationsDropdownList">
+                    <li><p class="dropdown-item text-muted text-center small no-notifications mb-0">Loading...</p></li>
+                    <li><hr class="dropdown-divider my-0"></li>
+                    <li><a class="dropdown-item text-center view-all-link small" href="{{ url_for('notifications_ui.list_notifications') }}">View All Notifications</a></li>
+                </ul>
+            </div>
+
+            <div class="dropdown">
+                <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-user-circle fa-lg me-2 text-secondary"></i>
+                    <span class="text-dark">{{ g.user['full_name'] }}</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end text-small shadow" aria-labelledby="dropdownUser">
+                    <li><a class="dropdown-item {% if request.endpoint == 'main.profile' %}active{% endif %}" href="{{ url_for('main.profile') }}"><i class="fas fa-id-card fa-fw me-2"></i>Profile</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt fa-fw me-2"></i>Sign out</a></li>
+                </ul>
+            </div>
+        {% else %}
+            <h3 class="text-secondary"><i class="fas fa-users-cog"></i> HR System Portal</h3>
+        {% endif %}
+    </div>
+    {% endif %}
+
+
+    <div class="{{ 'main-content-logged-in' if g.user else 'main-content-guest' }} {% if not g.user and request.endpoint == 'auth.login' %}login-page-override{% endif %}">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Make g.user available to JavaScript as `currentUser`
+        var currentUser = null;
+        {% if g.user %}
+        currentUser = {
+            isLoggedIn: true // A simple flag indicating user is logged in
+        };
+        {% endif %}
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Scroll active sidebar link into view
+            const sidebarNav = document.querySelector('.sidebar-nav');
+            const activeLink = document.querySelector('.sidebar .nav-link.active, .sidebar .dropdown-item.active');
+
+            if (sidebarNav && activeLink) {
+                if (activeLink.classList.contains('dropdown-item')) {
+                    const parentDropdownToggle = activeLink.closest('.dropdown').querySelector('.dropdown-toggle');
+                    if (parentDropdownToggle) {
+                        parentDropdownToggle.classList.add('active');
+                    }
+                }
+                const sidebarRect = sidebarNav.getBoundingClientRect();
+                const linkRect = activeLink.getBoundingClientRect();
+                const isLinkAbove = linkRect.top < sidebarRect.top;
+                const isLinkBelow = linkRect.bottom > sidebarRect.bottom;
+                if (isLinkAbove || isLinkBelow) {
+                    activeLink.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+                }
+            }
+
+            // Notification System
+            const notificationBadge = document.getElementById('notification-count-badge');
+            const notificationsDropdownList = document.getElementById('notificationsDropdownList');
+            const notificationBellDropdown = document.getElementById('notificationBellDropdown');
+
+            /**
+             * Formats a UTC date string into a more readable local date and time.
+             * @param {string} dateStringUTC - The UTC date string.
+             * @returns {string} Formatted date string or a placeholder for invalid dates.
+             */
+            function formatDate(dateStringUTC) {
+                console.log("Attempting to format date:", dateStringUTC); // Log the input date string
+
+                if (!dateStringUTC) {
+                    console.warn("formatDate called with null or empty string.");
+                    return "Date unavailable";
+                }
+
+                const options = {
+                    year: 'numeric', month: 'short', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit', hour12: true
+                };
+
+                let date = new Date(dateStringUTC);
+
+                // If parsing failed, and it's not an ISO string already containing 'Z' or timezone offset,
+                // and it contains a space (common in 'YYYY-MM-DD HH:MM:SS' from some backends),
+                // try appending 'Z' to hint it's UTC.
+                if (isNaN(date.getTime())) {
+                    console.warn("Initial parsing failed for:", dateStringUTC);
+                    if (typeof dateStringUTC === 'string' && dateStringUTC.includes(' ') && !dateStringUTC.endsWith('Z') && !/T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}/.test(dateStringUTC)) {
+                        console.log("Retrying with 'Z' appended for:", dateStringUTC);
+                        date = new Date(dateStringUTC + 'Z');
+                    }
+                }
+
+                if (isNaN(date.getTime())) {
+                    console.error("Still failed to parse date:", dateStringUTC, "(even after potential 'Z' append)");
+                    return "Date unavailable";
+                }
+
+                return date.toLocaleString('en-US', options);
+            }
+
+            /**
+             * Marks a specific notification as read.
+             * @param {string} notificationId - The ID of the notification.
+             * @param {string} targetUrl - The URL to navigate to after marking as read.
+             */
+            function markNotificationAsRead(notificationId, targetUrl) {
+                fetch("{{ url_for('notifications_ui.mark_as_read') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+                    },
+                    body: JSON.stringify({ id: notificationId })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().catch(() => ({})).then(errData => {
+                           throw new Error(`Failed to mark as read, status: ${response.status}. Server message: ${errData.message || 'None'}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        fetchNotificationData();
+                        if (targetUrl && targetUrl !== '#' && targetUrl !== window.location.href + '#') {
+                            window.location.href = targetUrl;
+                        }
+                    } else {
+                        console.error("API Error: Failed to mark notification as read:", data.message || "No message from server.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Network/Fetch Error: Error marking notification as read:', error);
+                });
+            }
+
+            /**
+             * Fetches notification count and recent unread notifications to update the UI.
+             */
+            function fetchNotificationData() {
+                if (!currentUser || !notificationBadge || !notificationsDropdownList) {
+                     if (notificationBadge) notificationBadge.style.display = 'none';
+                    return;
+                }
+
+                fetch("{{ url_for('notifications_ui.api_unread_count') }}")
+                    .then(response => response.ok ? response.json() : Promise.reject(`Failed to fetch count, status: ${response.status}`))
+                    .then(data => {
+                        if (data.unread_count > 0) {
+                            notificationBadge.textContent = data.unread_count;
+                            notificationBadge.style.display = 'inline-block';
+                        } else {
+                            notificationBadge.textContent = '0';
+                            notificationBadge.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching notification count:', error);
+                        if (notificationBadge) notificationBadge.style.display = 'none';
+                    });
+
+                fetch("{{ url_for('notifications_ui.api_recent_unread_notifications') }}?limit=5")
+                    .then(response => response.ok ? response.json() : Promise.reject(`Failed to fetch recent notifications, status: ${response.status}`))
+                    .then(data => {
+                        let itemsHtml = '';
+                        if (data.notifications && data.notifications.length > 0) {
+                            data.notifications.forEach(notif => {
+                                const readStatusClass = notif.is_read ? 'notification-item-read' : 'notification-item-unread';
+                                const messageDisplay = notif.message.length > 60 ? notif.message.substring(0, 57) + '...' : notif.message;
+                                itemsHtml += `
+                                    <li>
+                                        <a class="dropdown-item ${readStatusClass}" href="${notif.link_url || '#'}" data-notification-id="${notif.id}">
+                                            <span class="notification-message">${messageDisplay}</span>
+                                            <span class="notification-timestamp">${formatDate(notif.created_at)}</span>
+                                        </a>
+                                    </li>`;
+                            });
+                        } else {
+                            itemsHtml = '<li><p class="dropdown-item text-muted text-center small no-notifications mb-0">No new notifications</p></li>';
+                        }
+
+                        notificationsDropdownList.innerHTML = itemsHtml +
+                            '<li><hr class="dropdown-divider my-0"></li>' +
+                            '<li><a class="dropdown-item text-center view-all-link small" href="{{ url_for("notifications_ui.list_notifications") }}">View All Notifications</a></li>';
+
+                        notificationsDropdownList.querySelectorAll('a.dropdown-item[data-notification-id]').forEach(item => {
+                            item.addEventListener('click', function(e) {
+                                const notificationId = this.dataset.notificationId;
+                                const targetUrl = this.getAttribute('href');
+                                if (targetUrl === '#' || targetUrl === window.location.href + '#') {
+                                    e.preventDefault();
+                                }
+                                markNotificationAsRead(notificationId, targetUrl);
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching recent notifications:', error);
+                        notificationsDropdownList.innerHTML = '<li><a class="dropdown-item text-danger" href="#">Error loading notifications</a></li>' +
+                            '<li><hr class="dropdown-divider my-0"></li>' +
+                            '<li><a class="dropdown-item text-center view-all-link small" href="{{ url_for("notifications_ui.list_notifications") }}">View All Notifications</a></li>';
+                    });
+            }
+
+            if (notificationBadge && notificationsDropdownList && currentUser) {
+               fetchNotificationData();
+               setInterval(fetchNotificationData, 30000);
+
+                notificationsDropdownList.addEventListener('click', function(e) {
+                    if (e.target.closest('a.dropdown-item[data-notification-id]')) {
+                        const targetHref = e.target.closest('a.dropdown-item').getAttribute('href');
+                        if (targetHref === '#' || targetHref === window.location.href + '#') {
+                            var notificationBellInstance = bootstrap.Dropdown.getInstance(notificationBellDropdown);
+                            if (notificationBellInstance) {
+                                // notificationBellInstance.hide();
+                            }
+                        }
+                    }
+                });
+            } else if (notificationBadge) {
+                notificationBadge.style.display = 'none';
+            }
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

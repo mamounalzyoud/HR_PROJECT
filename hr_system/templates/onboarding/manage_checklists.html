@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Onboarding Checklists{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">Manage Onboarding Checklists</h1>
+    <a href="{{ url_for('onboarding.create_checklist') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> New Checklist
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Default</th>
+                        <th>Tasks</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for checklist in checklists %}
+                    <tr>
+                        <td>{{ checklist['name'] }}</td>
+                        <td>{{ checklist['description'] | truncate(80) if checklist['description'] else 'N/A' }}</td>
+                        <td>
+                            {% if checklist['is_default'] %}
+                                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Default</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('onboarding.manage_tasks', checklist_id=checklist['id']) }}" class="btn btn-sm btn-outline-secondary py-0">
+                                Manage Tasks
+                            </a>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('onboarding.edit_checklist', checklist_id=checklist['id']) }}" class="btn btn-sm btn-info py-0 me-1" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {# --- Clone Button --- #}
+                            <form method="post" action="{{ url_for('onboarding.clone_checklist', checklist_id=checklist['id']) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to clone checklist \'{{ checklist['name'] }}\'?');">
+                                <button type="submit" class="btn btn-sm btn-warning py-0 me-1" title="Clone">
+                                    <i class="fas fa-clone"></i>
+                                </button>
+                            </form>
+                            {# --- End Clone Button --- #}
+                            <form method="post" action="{{ url_for('onboarding.delete_checklist', checklist_id=checklist['id']) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete checklist \'{{ checklist['name'] }}\'? This cannot be undone.');">
+                                <button type="submit" class="btn btn-sm btn-danger py-0" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No onboarding checklists found. Add one to get started!</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

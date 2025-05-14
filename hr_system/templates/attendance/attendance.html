@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}My Attendance{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">My Attendance</h1>
+    {# Optional: Add export button or other actions here #}
+</div>
+
+<form method="get" class="row g-3 mb-4 p-3 border rounded bg-light">
+    <div class="col-md-5">
+        <label for="start_date" class="form-label">Start Date</label>
+        <input type="date" class="form-control form-control-sm" id="start_date" name="start_date" value="{{ start_date }}">
+    </div>
+    <div class="col-md-5">
+        <label for="end_date" class="form-label">End Date</label>
+        <input type="date" class="form-control form-control-sm" id="end_date" name="end_date" value="{{ end_date }}">
+    </div>
+    <div class="col-md-2 align-self-end">
+        <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+    </div>
+</form>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header"><h5 class="mb-0"><i class="fas fa-calendar-day me-2"></i>Daily Attendance Summary</h5></div>
+    <div class="card-body">
+        <p><strong>Total Hours Worked (Period):</strong> {{ '%.2f' | format(total_hours or 0) }}</p>
+        <p><strong>Days Present (Period):</strong> {{ present_days or 0 }}</p>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Hours Worked</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in attendance_records %}
+                    <tr>
+                        <td>{{ rec['date'] }}</td> {# Assuming 'date' is just a date string, no time component #}
+                        <td><span class="badge bg-{{ 'success' if rec['status'] == 'present' else 'danger' }}">{{ rec['status'] | title }}</span></td>
+                        <td>{{ '%.2f' | format(rec['hours_worked'] or 0) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="3" class="text-center text-muted">No attendance records for this period.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header"><h5 class="mb-0"><i class="fas fa-user-clock me-2"></i>Time Clock Entries</h5></div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Clock In</th>
+                        <th>Clock Out</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in time_clock_records %} {# Changed from time_clock_records_raw to time_clock_records if you updated the variable name in the route #}
+                    <tr>
+                        <td>
+                            {% if rec['clock_in_utc_str'] %}
+                                {{ rec['clock_in_utc_str'] | localdatetime(format_str='%Y-%m-%d %I:%M:%S %p') }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if rec['clock_out_utc_str'] %}
+                                {{ rec['clock_out_utc_str'] | localdatetime(format_str='%Y-%m-%d %I:%M:%S %p') }}
+                            {% elif rec['status'] == 'active' %}
+                                Still Active
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>{{ rec['status'] | title }}</td>
+                   </tr>
+                    {% else %}
+                    <tr><td colspan="3" class="text-center text-muted">No time clock entries for this period.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Salary - {{ employee['full_name'] }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+     <h1 class="h3">Manage Salary for: {{ employee['full_name'] }}</h1>
+     <a href="{{ url_for('salaries.manage_salaries') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back to Salary List
+    </a>
+</div>
+
+{# --- Basic Salary Form --- #}
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Basic Salary Information</h5>
+        <small class="text-muted">Employee: <strong>{{ employee['full_name'] }}</strong> ({{ employee['department'] or 'N/A' }})</small>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{{ url_for('salaries.edit_employee_salary', user_id=employee['id']) }}">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="basic_salary" class="form-label">Basic Salary <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" class="form-control" id="basic_salary" name="basic_salary"
+                           value="{{ salary['basic_salary'] if salary and salary['basic_salary'] is not none else '' }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="currency" class="form-label">Currency <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="currency" name="currency"
+                           value="{{ salary['currency'] if salary and salary['currency'] else 'USD' }}" required>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="pay_frequency" class="form-label">Pay Frequency <span class="text-danger">*</span></label>
+                    <select class="form-select" id="pay_frequency" name="pay_frequency" required>
+                        <option value="Annually" {% if salary and salary['pay_frequency'] == 'Annually' %}selected{% endif %}>Annually</option>
+                        <option value="Monthly" {% if (salary and salary['pay_frequency'] == 'Monthly') or not salary %}selected{% endif %}>Monthly</option>
+                        <option value="Bi-Weekly" {% if salary and salary['pay_frequency'] == 'Bi-Weekly' %}selected{% endif %}>Bi-Weekly</option>
+                        <option value="Weekly" {% if salary and salary['pay_frequency'] == 'Weekly' %}selected{% endif %}>Weekly</option>
+                        <option value="Hourly" {% if salary and salary['pay_frequency'] == 'Hourly' %}selected{% endif %}>Hourly</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="effective_date" class="form-label">Effective Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="effective_date" name="effective_date"
+                           value="{{ salary['effective_date'] if salary and salary['effective_date'] else '' }}" required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">{% if salary %}Update Basic Salary{% else %}Set Basic Salary{% endif %}</button>
+        </form>
+    </div>
+</div>
+
+{# --- Allowances and Deductions Section --- #}
+<div class="card shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+         <h5 class="mb-0"><i class="fas fa-list-ul me-2"></i>Salary Components</h5>
+         <a href="{{ url_for('salaries.add_salary_component', user_id=employee['id']) }}" class="btn btn-sm btn-success">
+             <i class="fas fa-plus me-1"></i> Add Component
+         </a>
+    </div>
+    <div class="card-body">
+        {% set allowances = components | selectattr('component_type', 'equalto', 'allowance') | list %}
+        {% set deductions = components | selectattr('component_type', 'equalto', 'deduction') | list %}
+
+        <h6><i class="fas fa-plus-circle me-1 text-success"></i>Allowances</h6>
+        {% if allowances %}
+            <table class="table table-sm table-hover mb-4">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Value</th>
+                        <th>Basis</th>
+                        <th>Cap</th>
+                        <th>Frequency</th>
+                        {# <th>Created At</th> #}
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for comp in allowances %}
+                    <tr>
+                        <td>{{ comp['component_name'] }}</td>
+                        <td>{{ comp['calculation_type'] | title }}</td>
+                        <td>
+                            {% if comp['calculation_type'] == 'fixed' %}
+                                {{ '%.2f' | format(comp['amount'] or 0) }}
+                            {% elif comp['calculation_type'] == 'percentage' %}
+                                {{ '%.2f' | format(comp['percentage_rate'] or 0) }}%
+                            {% endif %}
+                        </td>
+                        <td>{{ comp['calculation_basis'] | replace('_', ' ') | title if comp['calculation_basis'] else 'N/A' }}</td>
+                        <td>{{ '%.2f' | format(comp['upper_limit']) if comp['upper_limit'] is not none else 'N/A' }}</td>
+                        <td>{{ comp['frequency'] }}</td>
+                        {# Example if comp.created_at_utc_str was fetched
+                        <td>
+                            {% if comp.created_at_utc_str %}
+                                {{ comp.created_at_utc_str | localdatetime(format_str='%Y-%m-%d') }}
+                            {% endif %}
+                        </td>
+                        #}
+                        <td>
+                            <a href="{{ url_for('salaries.edit_salary_component', component_id=comp['id']) }}" class="btn btn-sm btn-outline-info py-0 me-1" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="post" action="{{ url_for('salaries.delete_salary_component', component_id=comp['id']) }}" onsubmit="return confirm('Delete this allowance?');" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-danger py-0" title="Delete"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="text-muted fst-italic">No allowances added yet.</p>
+        {% endif %}
+
+        <hr>
+        <h6><i class="fas fa-minus-circle me-1 text-danger"></i>Deductions</h6>
+         {% if deductions %}
+            <table class="table table-sm table-hover">
+                 <thead class="table-light">
+                     <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Value</th>
+                        <th>Basis</th>
+                        <th>Cap</th>
+                        <th>Frequency</th>
+                        <th>Statutory?</th>
+                        {# <th>Created At</th> #}
+                        <th>Action</th>
+                    </tr>
+                 </thead>
+                <tbody>
+                {% for comp in deductions %}
+                    <tr>
+                        <td>{{ comp['component_name'] }}</td>
+                         <td>{{ comp['calculation_type'] | title }}</td>
+                        <td>
+                            {% if comp['calculation_type'] == 'fixed' %}
+                                {{ '%.2f' | format(comp['amount'] or 0) }}
+                            {% elif comp['calculation_type'] == 'percentage' %}
+                                {{ '%.2f' | format(comp['percentage_rate'] or 0) }}%
+                            {% endif %}
+                        </td>
+                        <td>{{ comp['calculation_basis'] | replace('_', ' ') | title if comp['calculation_basis'] else 'N/A' }}</td>
+                        <td>{{ '%.2f' | format(comp['upper_limit']) if comp['upper_limit'] is not none else 'N/A' }}</td>
+                        <td>{{ comp['frequency'] }}</td>
+                        <td>{{ 'Yes' if comp['is_statutory'] == 1 else 'No' }}</td>
+                        {# Example if comp.created_at_utc_str was fetched
+                        <td>
+                            {% if comp.created_at_utc_str %}
+                                {{ comp.created_at_utc_str | localdatetime(format_str='%Y-%m-%d') }}
+                            {% endif %}
+                        </td>
+                        #}
+                        <td>
+                            <a href="{{ url_for('salaries.edit_salary_component', component_id=comp['id']) }}" class="btn btn-sm btn-outline-info py-0 me-1" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="post" action="{{ url_for('salaries.delete_salary_component', component_id=comp['id']) }}" onsubmit="return confirm('Delete this deduction?');" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-danger py-0" title="Delete"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="text-muted fst-italic">No deductions added yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Payslip - {{ '%02d' | format(payslip['pay_period_month']) }}/{{ payslip['pay_period_year'] }} - {{ payslip['full_name'] }}</title>
+    <style>
+        @page {
+            size: A4; /* Define page size */
+            margin: 1.5cm; /* Define margins */
+        }
+        body { 
+            font-family: 'Helvetica', 'Arial', sans-serif; /* Common PDF-safe fonts */
+            font-size: 10pt; 
+            line-height: 1.4;
+        }
+        .payslip-container { 
+            border: 1px solid #ddd; 
+            padding: 20px; 
+            width: 100%; /* Use full width within margins */
+            box-sizing: border-box; /* Include padding and border in width */
+        }
+        .header { 
+            border-bottom: 2px solid #eee; 
+            padding-bottom: 10px; 
+            margin-bottom: 20px; 
+            text-align: center;
+        }
+        .header h3 { 
+            margin: 0 0 5px 0; 
+            font-size: 16pt;
+            color: #333;
+        }
+         .header p {
+             margin: 0; 
+             font-size: 10pt;
+             color: #555;
+         }
+        .employee-info {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #eee;
+        }
+        .employee-info p { 
+            margin: 3px 0; 
+            font-size: 10pt; 
+        }
+        .row { 
+            display: flex; 
+            width: 100%; 
+            margin-bottom: 15px; 
+            /* Ensure columns don't wrap unnecessarily */
+            flex-wrap: nowrap; 
+        }
+        .col-6 { 
+            width: 50%; 
+            padding: 0 15px; /* Add some padding between columns */
+            box-sizing: border-box;
+        }
+        .col-6:first-child {
+             border-right: 1px solid #eee; /* Separator line */
+             padding-left: 0;
+        }
+         .col-6:last-child {
+             padding-right: 0;
+        }
+        h5 { 
+            margin-top: 0; 
+            margin-bottom: 8px; 
+            font-size: 12pt; 
+            border-bottom: 1px solid #ccc; 
+            padding-bottom: 4px; 
+            color: #444;
+        }
+        .text-success { color: #198754; }
+        .text-danger { color: #dc3545; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-bottom: 15px; 
+            font-size: 9.5pt; /* Slightly larger table font */
+        }
+        td, th { 
+            padding: 5px 8px; /* Slightly more padding */
+            text-align: left; 
+            vertical-align: top;
+        }
+        .text-end { text-align: right; }
+        .fw-bold { font-weight: bold; }
+        .table-light { background-color: #f8f9fa; }
+        .table-summary td { border-top: 1px solid #dee2e6; }
+        .net-pay-section { 
+            margin-top: 20px; 
+            padding-top: 10px; 
+            border-top: 2px solid #aaa;
+        }
+        .net-pay-row td { 
+            font-weight: bold;
+            font-size: 13pt; 
+            padding: 8px;
+            background-color: #e9ecef;
+            border-top: 2px solid #555;
+        }
+        .ps-3 { padding-left: 1rem !important; }
+        .text-muted { color: #6c757d; }
+        .fst-italic { font-style: italic; }
+        .footer { 
+            margin-top: 30px; 
+            text-align: center; 
+            font-size: 8pt; 
+            color: #888; 
+            border-top: 1px solid #eee; 
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="payslip-container">
+        <div class="header">
+            <h3>Payslip</h3>
+            <p>Pay Period: {{ '%02d' | format(payslip['pay_period_month']) }}/{{ payslip['pay_period_year'] }}</p>
+        </div>
+
+        <div class="employee-info">
+             <p><strong>Employee:</strong> {{ payslip['full_name'] }}</p>
+             <p><strong>Department:</strong> {{ payslip['department'] or 'N/A' }}</p>
+             <p><strong>Generated:</strong> {{ payslip['generated_at'].strftime('%Y-%m-%d %H:%M') }}</p>
+        </div>
+
+        <div class="row">
+            {# --- Earnings Column --- #}
+            <div class="col-6">
+                <h5 class="text-success">Earnings</h5>
+                <table>
+                    <tbody>
+                        <tr>
+                            <td>Basic Salary ({{ payslip['pay_frequency_used'] }})</td>
+                            <td class="text-end">{{ '%.2f' | format(payslip['basic_salary_used']) }}</td>
+                        </tr>
+                        <tr class="table-light fw-bold">
+                            <td colspan="2">Allowances:</td>
+                        </tr>
+                        {% for item in allowances %}
+                        <tr>
+                            <td class="ps-3">{{ item['component_name'] }}</td>
+                            <td class="text-end">+ {{ '%.2f' | format(item['amount']) }}</td>
+                        </tr>
+                        {% else %}
+                         <tr><td colspan="2" class="ps-3 text-muted fst-italic">No allowances this period</td></tr>
+                        {% endfor %}
+                        <tr class="table-light fw-bold table-summary">
+                            <td>Total Allowances</td>
+                            <td class="text-end">{{ '%.2f' | format(payslip['total_allowances']) }}</td>
+                        </tr>
+                        <tr class="fw-bold table-summary">
+                            <td>Gross Pay</td>
+                            <td class="text-end">{{ payslip['currency'] }} {{ '%.2f' | format(payslip['gross_pay']) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            {# --- Deductions Column --- #}
+            <div class="col-6">
+                 <h5 class="text-danger">Deductions</h5>
+                 <table>
+                     <tbody>
+                         <tr class="table-light fw-bold">
+                            <td colspan="2">Deductions:</td>
+                        </tr>
+                         {% for item in deductions %}
+                         <tr>
+                             <td class="ps-3">{{ item['component_name'] }}</td>
+                             <td class="text-end">- {{ '%.2f' | format(item['amount']) }}</td>
+                         </tr>
+                         {% else %}
+                          <tr><td colspan="2" class="ps-3 text-muted fst-italic">No deductions this period</td></tr>
+                         {% endfor %}
+                         <tr class="table-light fw-bold table-summary">
+                             <td>Total Deductions</td>
+                             <td class="text-end">{{ '%.2f' | format(payslip['total_deductions']) }}</td>
+                         </tr>
+                     </tbody>
+                 </table>
+            </div>
+        </div>
+
+        {# --- Net Pay Summary --- #}
+        <div class="net-pay-section">
+            <table>
+                <tbody>
+                     <tr class="fw-bold net-pay-row">
+                         <td>NET PAY</td>
+                         <td class="text-end">{{ payslip['currency'] }} {{ '%.2f' | format(payslip['net_pay']) }}</td>
+                     </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            This is a computer-generated payslip.
+        </div>
+    </div>
+</body>
+</html>

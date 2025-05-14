@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}My Benefits{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">My Benefits</h1>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Type</th>
+                        <th>Details</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in benefits %}
+                    <tr>
+                        <td>{{ b['benefit_type'] }}</td>
+                        <td>{{ b['details'] or 'N/A' }}</td>
+                        <td>{{ b['start_date'] or 'N/A' }}</td> {# Date-only field #}
+                        <td>{{ b['end_date'] or 'Ongoing' }}</td> {# Date-only field or text #}
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="text-center text-muted">No active benefits assigned.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

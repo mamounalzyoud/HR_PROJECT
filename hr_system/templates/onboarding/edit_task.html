@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">{{ title }}</h1>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post" action="{{ form_action_url }}" enctype="multipart/form-data">
+            {# --- Basic Task Details --- #}
+            <div class="mb-3">
+                <label for="task_name" class="form-label">Task Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="task_name" name="task_name" 
+                       value="{{ request.form.get('task_name') or (task['task_name'] if task else '') }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description" 
+                          rows="3">{{ request.form.get('description') or (task['description'] if task else '') }}</textarea>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="responsible_role" class="form-label">Responsible Role <span class="text-danger">*</span></label>
+                    <select class="form-select" id="responsible_role" name="responsible_role" required>
+                        {% set current_role = request.form.get('responsible_role') or (task['responsible_role'] if task else '') %}
+                        <option value="" disabled {% if not current_role %}selected{% endif %}>Select Role...</option>
+                        <option value="Employee" {% if current_role == 'Employee' %}selected{% endif %}>Employee</option>
+                        <option value="Manager" {% if current_role == 'Manager' %}selected{% endif %}>Manager</option>
+                        <option value="HR" {% if current_role == 'HR' %}selected{% endif %}>HR</option>
+                        <option value="IT" {% if current_role == 'IT' %}selected{% endif %}>IT</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="due_days_after_start" class="form-label">Due Days After Start (Optional)</label>
+                    <input type="number" class="form-control" id="due_days_after_start" name="due_days_after_start" 
+                           value="{{ request.form.get('due_days_after_start') or (task['due_days_after_start'] if task and task['due_days_after_start'] is not none else '') }}" min="0">
+                    <small class="form-text text-muted">e.g., 0 for on start date, 7 for one week after.</small>       
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="display_order" class="form-label">Display Order</label>
+                    <input type="number" class="form-control" id="display_order" name="display_order" 
+                           value="{{ request.form.get('display_order') or (task['display_order'] if task and task['display_order'] is not none else '0') }}" min="0">
+                    <small class="form-text text-muted">
+                        Controls task sequence. Lower numbers appear first. 
+                        If left as 0 or blank for a new task, it will be appended.
+                    </small>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="depends_on_task_id" class="form-label">Depends on Task (Prerequisite)</label>
+                    <select class="form-select" id="depends_on_task_id" name="depends_on_task_id">
+                        <option value="">-- None --</option>
+                        {% set current_dependency_id = None %}
+                        {# Handle form repopulation on error OR existing task data #}
+                        {% if request.form.get('depends_on_task_id') is defined %}
+                            {# If form submitted, use its value. Empty string becomes None in Python logic. #}
+                            {% set current_dependency_id = request.form.get('depends_on_task_id') | default(None, true) | int(0) %}
+                        {% elif task and task['depends_on_task_id'] is not none %}
+                            {% set current_dependency_id = task['depends_on_task_id'] %}
+                        {% endif %}
+
+                        {% for prereq_task in potential_prerequisites %}
+                            {# Ensure not to list the current task itself as a potential prerequisite #}
+                            {% if not task or task['id'] != prereq_task['id'] %} 
+                                <option value="{{ prereq_task['id'] }}" {% if current_dependency_id == prereq_task['id'] %}selected{% endif %}>
+                                    {{ prereq_task['task_name'] }} (Order: {{ prereq_task.display_order }})
+                                </option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">Select a task that must be completed before this one can start.</small>
+                </div>
+            </div>
+            {# --- END Basic Task Details --- #}
+
+            <hr>
+            <h5 class="mb-3 text-primary"><i class="fas fa-paperclip me-1"></i> Task Template Resources</h5>
+            
+            {# Display Existing Template Attachments/Links #}
+            {% if existing_attachments %}
+            <div class="mb-3">
+                <p><strong>Current Resources for this Task Template:</strong></p>
+                <ul class="list-group list-group-flush mb-3">
+                    {% for attachment in existing_attachments %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                        <div>
+                            {% if attachment.attachment_type == 'template_file' %}
+                                <i class="fas fa-file-alt me-2 text-secondary"></i>
+                                <a href="{{ url_for('onboarding.download_task_attachment', attachment_id=attachment.id) }}" target="_blank">{{ attachment.file_name }}</a>
+                                <small class="text-muted ms-2">({{ attachment.stored_file_name | truncate(15) }})</small>
+                            {% elif attachment.attachment_type == 'template_link' %}
+                                <i class="fas fa-link me-2 text-primary"></i>
+                                <a href="{{ attachment.url }}" target="_blank">{{ attachment.file_name or attachment.url }}</a>
+                            {% endif %}
+                            {# Example: If attachment had an 'uploaded_at_utc_str' field from Python
+                            {% if attachment.uploaded_at_utc_str %}
+                                <small class="text-muted d-block">Uploaded: {{ attachment.uploaded_at_utc_str | localdatetime(format_str='%Y-%m-%d') }}</small>
+                            {% endif %}
+                            #}
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="delete_attachment" value="{{ attachment.id }}" id="delete_attachment_{{ attachment.id }}">
+                            <label class="form-check-label text-danger" for="delete_attachment_{{ attachment.id }}">
+                                <small>Delete</small>
+                            </label>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {# Add New File Attachment for Task Template #}
+            <div class="mb-3">
+                <label for="resource_file" class="form-label">Add New File Resource (Optional)</label>
+                <input class="form-control" type="file" id="resource_file" name="resource_file">
+                <small class="form-text text-muted">Allowed types: {{ ALLOWED_EXTENSIONS | join(', ') }}. Max 16MB.</small>
+            </div>
+
+            {# Add New URL/Link Resource for Task Template #}
+            <div class="mb-3">
+                <label for="resource_url" class="form-label">Add New Link Resource (Optional)</label>
+                <input type="url" class="form-control" id="resource_url" name="resource_url" placeholder="https://example.com/resource" value="{{ request.form.get('resource_url', '') }}">
+                <small class="form-text text-muted">Enter the full URL including http(s)://.</small>
+            </div>
+
+
+            <button type="submit" class="btn btn-primary mt-2">
+                {% if task and task['id'] %}Save Changes{% else %}Add Task{% endif %}
+            </button>
+            <a href="{{ url_for('onboarding.manage_tasks', checklist_id=checklist['id']) }}" class="btn btn-secondary mt-2">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

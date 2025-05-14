@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Leaves{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">Manage Leave Requests</h1>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Type</th>
+                        <th>Period</th>
+                        {# <th>Submitted At</th> #}
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in leave_requests %}
+                    {% set status_class = {'pending':'warning', 'approved':'success', 'rejected':'danger'}.get(req.status, 'secondary') %}
+                    <tr>
+                        <td>{{ req['employee_name'] }}</td>
+                        <td>{{ req['employee_department'] }}</td>
+                        <td>{{ req['leave_type'] }}</td>
+                        <td>{{ req['start_date'] }} to {{ req['end_date'] }}</td> {# Date-only fields #}
+                        {# Example if created_at_utc_str was fetched and to be displayed
+                        <td>
+                            {% if req['created_at_utc_str'] %}
+                                {{ req['created_at_utc_str'] | localdatetime }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td> 
+                        #}
+                        <td><span class="badge bg-{{ status_class }}">{{ req['status'] | title }}</span></td>
+                        <td>
+                            {% if req['status'] == 'pending' %}
+                            <form method="post" action="{{ url_for('leaves.leave_action', leave_id=req['id']) }}" class="d-inline">
+                                <input type="hidden" name="action" value="approve">
+                                <button type="submit" class="btn btn-sm btn-success py-0 me-1" title="Approve"><i class="fas fa-check"></i></button>
+                            </form>
+                            <form method="post" action="{{ url_for('leaves.leave_action', leave_id=req['id']) }}" class="d-inline">
+                                <input type="hidden" name="action" value="reject">
+                                <button type="submit" class="btn btn-sm btn-danger py-0" title="Reject"><i class="fas fa-times"></i></button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted fst-italic">Actioned</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-muted">No leave requests to manage.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

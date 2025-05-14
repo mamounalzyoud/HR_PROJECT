@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit User: {{ user['full_name'] }}{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">Edit User: {{ user['full_name'] }}</h1>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post" action="{{ url_for('users.edit_user', user_id=user['id']) }}">
+            {# Login Info #}
+            <h5 class="mb-3 text-primary"><i class="fas fa-info-circle me-1"></i> Login Information</h5>
+            <div class="row">
+                <div class="col-md-6 mb-3"><label for="full_name" class="form-label">Full Name <span class="text-danger">*</span></label><input type="text" class="form-control" id="full_name" name="full_name" value="{{ user['full_name'] }}" required></div>
+                <div class="col-md-6 mb-3"><label for="username" class="form-label">Username (Cannot Change)</label><input type="text" class="form-control" id="username" name="username" value="{{ user['username'] }}" readonly></div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3"><label for="email" class="form-label">Email <span class="text-danger">*</span></label><input type="email" class="form-control" id="email" name="email" value="{{ user['email'] }}" required></div>
+                <div class="col-md-6 mb-3"><label for="password" class="form-label">New Password (Leave blank to keep current)</label><input type="password" class="form-control" id="password" name="password" placeholder="Enter new password..."></div>
+            </div>
+             <hr>
+             {# Job Info #}
+            <h5 class="mb-3 text-primary"><i class="fas fa-briefcase me-1"></i> Job Information</h5>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="role" class="form-label">Role <span class="text-danger">*</span></label>
+                    <select class="form-select" id="role" name="role" required>
+                        <option value="employee" {% if user['role'] == 'employee' %}selected{% endif %}>Employee</option>
+                        <option value="manager" {% if user['role'] == 'manager' %}selected{% endif %}>Manager</option>
+                        <option value="admin" {% if user['role'] == 'admin' %}selected{% endif %}>Admin</option>
+                        <option value="hr" {% if user['role'] == 'hr' %}selected{% endif %}>HR</option>
+                        <option value="it" {% if user['role'] == 'it' %}selected{% endif %}>IT</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3"><label for="department" class="form-label">Department</label><input type="text" class="form-control" id="department" name="department" value="{{ user['department'] or '' }}"></div>
+                <div class="col-md-4 mb-3"><label for="hire_date" class="form-label">Hire Date</label><input type="date" class="form-control" id="hire_date" name="hire_date" value="{{ user['hire_date'] or '' }}"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="manager_id" class="form-label">Reports To (Manager)</label>
+                    <select class="form-select" id="manager_id" name="manager_id">
+                        <option value="">-- Select Manager --</option>
+                        {% for manager_user_item in managers %} {# Changed loop var name to avoid conflict #}
+                            <option value="{{ manager_user_item['id'] }}" {% if user['manager_id'] == manager_user_item['id'] %}selected{% endif %}>
+                                {{ manager_user_item['full_name'] }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                 <div class="col-md-6 mb-3">
+                    <label for="annual_leave_entitlement" class="form-label">Annual Leave Entitlement (Days)</label>
+                    <input type="number" step="0.5" class="form-control" id="annual_leave_entitlement" name="annual_leave_entitlement" value="{{ user['annual_leave_entitlement'] if user['annual_leave_entitlement'] is not none else '20.0' }}" min="0">
+                </div>
+            </div>
+            {# --- Onboarding Checklist Dropdown for Editing User --- #}
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="onboarding_checklist_id" class="form-label">Assign/Change Onboarding Checklist</label>
+                    <select class="form-select" id="onboarding_checklist_id" name="onboarding_checklist_id">
+                        <option value="">-- None --</option>
+                        {% for checklist_item in checklists %} {# Changed loop var name #}
+                            <option value="{{ checklist_item['id'] }}" 
+                                    {% if assigned_checklist_id == checklist_item['id'] %}selected{% endif %}>
+                                {{ checklist_item['name'] }} {% if checklist_item['is_default'] %}(Default){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                     <small class="form-text text-muted">Selecting a new checklist will replace current onboarding tasks from the previously assigned checklist for this employee.</small>
+                </div>
+                 {# --- Timezone Selection --- #}
+                <div class="col-md-6 mb-3">
+                    <label for="timezone" class="form-label">Timezone</label>
+                    <select class="form-select" id="timezone" name="timezone">
+                        <option value="">-- Use Application Default ({{ config.USER_DEFAULT_TIMEZONE }}) --</option>
+                        {% for tz in available_timezones %} {# Assuming available_timezones is passed from the route #}
+                            <option value="{{ tz }}" {% if user.timezone == tz %}selected{% endif %}>{{ tz }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            {# --- END Onboarding & Timezone --- #}
+             <hr>
+             {# Contact Info #}
+            <h5 class="mb-3 text-primary"><i class="fas fa-address-book me-1"></i> Contact Information</h5>
+             <div class="row">
+                <div class="col-md-6 mb-3"><label for="phone_number" class="form-label">Phone Number</label><input type="tel" class="form-control" id="phone_number" name="phone_number" value="{{ user['phone_number'] or '' }}"></div>
+            </div>
+             <div class="mb-3"><label for="address" class="form-label">Address</label><textarea class="form-control" id="address" name="address" rows="2">{{ user['address'] or '' }}</textarea></div>
+             <hr>
+             {# Emergency Contact #}
+            <h5 class="mb-3 text-primary"><i class="fas fa-exclamation-circle me-1"></i> Emergency Contact</h5>
+             <div class="row">
+                <div class="col-md-6 mb-3"><label for="emergency_contact_name" class="form-label">Name</label><input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name" value="{{ user['emergency_contact_name'] or '' }}"></div>
+                <div class="col-md-6 mb-3"><label for="emergency_contact_phone" class="form-label">Phone</label><input type="tel" class="form-control" id="emergency_contact_phone" name="emergency_contact_phone" value="{{ user['emergency_contact_phone'] or '' }}"></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">Update User</button>
+            <a href="{{ url_for('users.view_users') }}" class="btn btn-secondary mt-3">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

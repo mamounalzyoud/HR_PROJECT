@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-4">Reports Dashboard</h1>
+<div class="list-group shadow-sm">
+    {# Link to the attendance report view within this blueprint #}
+    <a href="{{ url_for('reports.attendance_report') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+        <div>
+            <i class="fas fa-calendar-alt me-2 text-primary"></i>Attendance Report
+            <small class="d-block text-muted">View hours worked and overtime by employee for a selected period.</small>
+        </div>
+        <i class="fas fa-chevron-right text-muted"></i>
+    </a>
+    {# Link to the leave report view within this blueprint #}
+    <a href="{{ url_for('reports.leave_report') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+        <div>
+            <i class="fas fa-plane-departure me-2 text-success"></i>Leave Report
+            <small class="d-block text-muted">View approved leave taken by type, employee, and period.</small>
+        </div>
+        <i class="fas fa-chevron-right text-muted"></i>
+    </a>
+    {# Placeholder for future reports #}
+    </div>
+{% endblock %}

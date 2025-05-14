@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Benefits{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">Manage Employee Benefits</h1>
+    <a href="{{ url_for('benefits.add_benefit') }}" class="btn btn-primary"><i class="fas fa-plus me-1"></i> Add Benefit</a>
+</div>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover table-sm align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Benefit Type</th>
+                        <th>Details</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in user_benefits %}
+                        {% set user = item.user %}
+                        {% set benefits_list = item.benefits %}
+                        {% if benefits_list %}
+                            {% for benefit in benefits_list %}
+                                {% set action_btn_text = "Deactivate" if benefit.status == 'active' else "Activate" %}
+                                {% set action_btn_class = "btn-warning" if benefit.status == 'active' else "btn-success" %}
+                                <tr>
+                                    {% if loop.first %} {# Show user info only on the first row for that user #}
+                                    <td rowspan="{{ benefits_list | length }}">{{ user['full_name'] }}</td>
+                                    <td rowspan="{{ benefits_list | length }}">{{ user['department'] or 'N/A' }}</td>
+                                    {% endif %}
+                                    <td>{{ benefit['benefit_type'] }}</td>
+                                    <td>{{ benefit['details'] or 'N/A' }}</td>
+                                    <td>{{ benefit['start_date'] or 'N/A' }}</td> {# Date-only field #}
+                                    <td>{{ benefit['end_date'] or 'Ongoing' }}</td> {# Date-only field or text #}
+                                    <td><span class="badge bg-{{ 'success' if benefit.status == 'active' else 'secondary' }}">{{ benefit['status'] | title }}</span></td>
+                                    <td>
+                                        <form method="post" action="{{ url_for('benefits.toggle_benefit', benefit_id=benefit['id']) }}" class="d-inline">
+                                            <button type="submit" class="btn btn-sm {{ action_btn_class }} py-0">{{ action_btn_text }}</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %} {# User has no benefits assigned #}
+                            <tr>
+                                <td>{{ user['full_name'] }}</td>
+                                <td>{{ user['department'] or 'N/A' }}</td>
+                                <td colspan="5" class="text-center text-muted">No benefits assigned</td>
+                                <td><a href="{{ url_for('benefits.add_benefit', user_id=user['id']) }}" class="btn btn-sm btn-outline-primary py-0">Add</a></td>
+                            </tr>
+                        {% endif %}
+                    {% else %}
+                        <tr><td colspan="8" class="text-center text-muted">No users found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

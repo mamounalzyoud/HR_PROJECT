@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}Performance Review Details{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">Performance Review Details</h1>
+    <div>
+        {% if g.user.role == 'manager' and review.manager_user_id == g.user.id %}
+            <a href="{{ url_for('performance.manage_performance') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Manage Reviews
+            </a>
+        {% elif review.employee_user_id == g.user.id %}
+             <a href="{{ url_for('performance.my_reviews') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to My Reviews
+            </a>
+        {% elif g.user.role == 'admin' %}
+            {# Admin might come from various places, consider a more generic back or none #}
+             <a href="{{ url_for('performance.manage_performance') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+{% if review %}
+<div class="card shadow-sm">
+    <div class="card-header bg-light">
+        <div class="row">
+            <div class="col-md-8">
+                <h5 class="mb-1">Review for: {{ review.employee_name }}</h5>
+                <p class="mb-0 text-muted">Period: {{ review.review_period_start }} to {{ review.review_period_end }}</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                 <p class="mb-1"><small>Review Date: 
+                    {% if review.review_date_utc_str %}
+                        {{ review.review_date_utc_str | localdatetime(format_str='%Y-%m-%d') }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </small></p>
+                <p class="mb-0"><small>Status: <span class="badge bg-{{ 'success' if review.status == 'Completed' or review.status == 'Acknowledged' else 'secondary' }}">{{ review.status }}</span></small></p>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-4">
+        <dl class="row">
+            <dt class="col-sm-3">Reviewed By (Manager):</dt>
+            <dd class="col-sm-9">{{ review.manager_name or 'N/A' }}</dd>
+
+            <dt class="col-sm-3">Overall Rating:</dt>
+            <dd class="col-sm-9">
+                {% if review.overall_rating %}
+                    {{ review.overall_rating }}/5
+                {% else %}
+                    <span class="text-muted">Not Rated</span>
+                {% endif %}
+            </dd>
+        </dl>
+        
+        <hr>
+        <h6 class="text-primary">Manager's Comments:</h6>
+        {% if review.manager_comments %}
+            <p style="white-space: pre-wrap;">{{ review.manager_comments }}</p>
+        {% else %}
+            <p class="text-muted fst-italic">No manager comments provided.</p>
+        {% endif %}
+        
+        <hr>
+        <h6 class="text-primary">Employee's Comments:</h6>
+        {% if review.employee_comments %}
+             <p style="white-space: pre-wrap;">{{ review.employee_comments }}</p>
+        {% else %}
+            <p class="text-muted fst-italic">No employee comments provided.</p>
+        {% endif %}
+
+        {# Add form for employee to acknowledge or add comments if status allows #}
+        {% if review.status == 'Completed' and review.employee_user_id == g.user.id %}
+            {# Placeholder for future "Acknowledge" or "Add Employee Comment" form #}
+            {# <form method="post" action="{{ url_for('performance.acknowledge_review', review_id=review.id) }}">
+                <div class="mb-3">
+                    <label for="employee_ack_comments" class="form-label">Your Comments (Optional):</label>
+                    <textarea class="form-control" name="employee_ack_comments" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn btn-success">Acknowledge Review</button>
+            </form> #}
+        {% endif %}
+
+    </div>
+</div>
+{% else %}
+    <div class="alert alert-warning">Review details not found or you do not have permission to view it.</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Assign Onboarding Checklist{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">Assign Onboarding Checklist to Employee</h1>
+     <a href="{{ url_for('onboarding.admin_tracking_view') if g.user.role == 'admin' else url_for('onboarding.index') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i> Back
+    </a>
+</div>
+
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post">
+            <div class="mb-3">
+                <label for="employee_user_id" class="form-label">Employee <span class="text-danger">*</span></label>
+                <select class="form-select" id="employee_user_id" name="employee_user_id" required>
+                    <option value="" disabled selected>Select Employee...</option>
+                    {% for emp in employees %}
+                    <option value="{{ emp['id'] }}">{{ emp['full_name'] }} ({{ emp['department'] or 'N/A' }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="checklist_id" class="form-label">Onboarding Checklist <span class="text-danger">*</span></label>
+                <select class="form-select" id="checklist_id" name="checklist_id" required>
+                    <option value="" disabled selected>Select Checklist...</option>
+                    {% for chk in checklists %}
+                    <option value="{{ chk['id'] }}" {% if chk['is_default'] %}selected{% endif %}>
+                        {{ chk['name'] }} {% if chk['is_default'] %}(Default){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+                <small class="form-text text-muted">Assigning will replace any existing tasks from this specific checklist for the employee with the latest version.</small>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Assign Checklist</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

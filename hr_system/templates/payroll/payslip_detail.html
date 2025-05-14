@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}Payslip Details{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3">Payslip Details</h1>
+    <div>
+        <a href="{{ url_for('payroll.view_my_payslips') }}" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left me-1"></i> Back to List
+        </a>
+        {% if pdf_available %}
+        <a href="{{ url_for('payroll.download_payslip_pdf', payslip_id=payslip.id) }}" class="btn btn-sm btn-danger">
+            <i class="fas fa-file-pdf me-1"></i> Download PDF
+        </a>
+        {% else %}
+        <button class="btn btn-sm btn-danger" disabled title="PDF generation library not available on server.">
+            <i class="fas fa-file-pdf me-1"></i> PDF Unavailable
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-light">
+        <div class="row">
+            <div class="col-md-6">
+                <h5 class="mb-1">Payslip for {{ "%02d" | format(payslip.pay_period_month) }}/{{ payslip.pay_period_year }}</h5>
+                <p class="mb-0 text-muted">Employee: <strong>{{ payslip.full_name }}</strong> ({{ payslip.department or 'N/A' }})</p>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <p class="mb-1"><small>Generated: 
+                    {% if payslip.generated_at_utc_str %}
+                        {{ payslip.generated_at_utc_str | localdatetime }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </small></p>
+                <p class="mb-0"><small>Payslip ID: {{ payslip.id }}</small></p>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-4">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <h6>Earnings</h6>
+                <table class="table table-sm table-borderless">
+                    <tbody>
+                        <tr>
+                            <td>Basic Salary ({{ payslip.pay_frequency_used }})</td>
+                            <td class="text-end">{{ payslip.currency }} {{ "%.2f" | format(payslip.basic_salary_used) }}</td>
+                        </tr>
+                        {% for item in allowances %}
+                        <tr>
+                            <td>{{ item.component_name }}</td>
+                            <td class="text-end">{{ payslip.currency }} {{ "%.2f" | format(item.amount) }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="fw-bold border-top">
+                            <td>Total Allowances</td>
+                            <td class="text-end">{{ payslip.currency }} {{ "%.2f" | format(payslip.total_allowances) }}</td>
+                        </tr>
+                        <tr class="fw-bold table-primary border-top border-2 border-primary">
+                            <td>Gross Pay</td>
+                            <td class="text-end">{{ payslip.currency }} {{ "%.2f" | format(payslip.gross_pay) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>Deductions</h6>
+                <table class="table table-sm table-borderless">
+                    <tbody>
+                        {% for item in deductions %}
+                        <tr>
+                            <td>{{ item.component_name }}</td>
+                            <td class="text-end">{{ payslip.currency }} {{ "%.2f" | format(item.amount) }}</td>
+                        </tr>
+                        {% endfor %}
+                         {% if not deductions %}
+                        <tr><td colspan="2" class="text-muted fst-italic">No deductions for this period.</td></tr>
+                        {% endif %}
+                        <tr class="fw-bold border-top">
+                            <td>Total Deductions</td>
+                            <td class="text-end">{{ payslip.currency }} {{ "%.2f" | format(payslip.total_deductions) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <hr>
+        <div class="row justify-content-end">
+            <div class="col-md-6">
+                <table class="table table-sm table-borderless">
+                    <tbody>
+                        <tr class="fw-bold fs-5 table-success border-top border-2 border-success">
+                            <td>Net Pay</td>
+                            <td class="text-end">{{ payslip.currency }} {{ "%.2f" | format(payslip.net_pay) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

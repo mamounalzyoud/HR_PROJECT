@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-0 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        {% if is_clocked_in %}
+            <form action="{{ url_for('attendance.clock_out') }}" method="post" class="me-2">
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <i class="fas fa-stopwatch me-1"></i> Clock Out
+                </button>
+            </form>
+        {% else %}
+            <form action="{{ url_for('attendance.clock_in') }}" method="post" class="me-2">
+                <button type="submit" class="btn btn-sm btn-outline-success">
+                    <i class="fas fa-play-circle me-1"></i> Clock In
+                </button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card border-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-title text-primary">Clock Status</div>
+                        <div class="stat-value" id="clockStatusValue">{{ 'Clocked In' if is_clocked_in else 'Clocked Out' }}</div>
+                        <small class="text-muted" id="clockInTimeDetail">
+                            {% if is_clocked_in and clock_in_time %} {# clock_in_time is already localized from main.py #}
+                                Since: {{ clock_in_time }} 
+                                {% if hours_since_clock_in is not none %}
+                                    ({{ '%.1f' | format(hours_since_clock_in) }}h)
+                                {% endif %}
+                            {% elif is_clocked_in %}
+                                Loading...
+                            {% else %}
+                                &nbsp; 
+                            {% endif %}
+                        </small>
+                    </div>
+                    <i class="fas fa-user-clock fa-3x text-primary opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card border-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-title text-info">Vacation Balance</div>
+                        <div class="stat-value text-info">{{ '%.1f' | format(leave_balance) }} <span style="font-size: 0.9rem; font-weight: normal;">Days</span></div>
+                        <small class="text-muted">&nbsp;</small> </div>
+                    <i class="fas fa-umbrella-beach fa-3x text-info opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card border-warning">
+            <div class="card-body">
+                 <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-title text-warning">Pending Onboarding</div>
+                        <div class="stat-value text-warning">{{ pending_onboarding_tasks_count }} <span style="font-size: 0.9rem; font-weight: normal;">Tasks</span></div>
+                        {% if pending_onboarding_tasks_count > 0 %}
+                            <a href="{{ url_for('onboarding.index') }}" class="text-warning small">View Tasks</a>
+                        {% else %}
+                             <small class="text-muted">&nbsp;</small>
+                        {% endif %}
+                    </div>
+                    <i class="fas fa-tasks fa-3x text-warning opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card border-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-title text-success">Department</div>
+                        <div class="stat-value text-success" style="font-size: 1.5rem;">{{ g.user.department or 'N/A' }}</div>
+                        <small class="text-muted">{{ g.user.role | title }}</small>
+                    </div>
+                     <i class="fas fa-building fa-3x text-success opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-calendar-day me-2"></i>Recent Attendance</h5>
+                <a href="{{ url_for('attendance.view_attendance') }}" class="btn btn-sm btn-outline-secondary py-0">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_attendance %}
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">Date:</dt>
+                        <dd class="col-sm-9">{{ recent_attendance.date }}</dd> {# Date-only #}
+
+                        <dt class="col-sm-3">Status:</dt>
+                        <dd class="col-sm-9">
+                            <span class="badge bg-{{ 'success' if recent_attendance.status == 'present' else ('danger' if recent_attendance.status == 'absent' else 'info') }}">
+                                {{ recent_attendance.status | title }}
+                            </span>
+                        </dd>
+
+                        {% if recent_attendance.status == 'present' and recent_attendance.hours_worked is not none %}
+                        <dt class="col-sm-3">Hours:</dt>
+                        <dd class="col-sm-9">{{ '%.2f' | format(recent_attendance.hours_worked) }} hrs</dd>
+                        {% endif %}
+                    </dl>
+                {% else %}
+                    <p class="text-muted">No recent attendance records.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-plane-circle-check me-2"></i>My Leave Requests</h5>
+                <a href="{{ url_for('leaves.view_leaves') }}" class="btn btn-sm btn-outline-secondary py-0">View/Request</a>
+            </div>
+            <div class="card-body">
+                {% if recent_leave_request %}
+                     <dl class="row mb-0">
+                        <dt class="col-sm-3">Type:</dt>
+                        <dd class="col-sm-9">{{ recent_leave_request.leave_type | title }}</dd>
+
+                        <dt class="col-sm-3">Dates:</dt>
+                        <dd class="col-sm-9">{{ recent_leave_request.start_date }} to {{ recent_leave_request.end_date }}</dd> {# Date-only #}
+
+                        <dt class="col-sm-3">Status:</dt>
+                        <dd class="col-sm-9">
+                             <span class="badge bg-{{ 'success' if recent_leave_request.status == 'approved' else ('warning text-dark' if recent_leave_request.status == 'pending' else ('danger' if recent_leave_request.status == 'rejected' else 'secondary')) }}">
+                                {{ recent_leave_request.status | title }}
+                            </span>
+                        </dd>
+                    </dl>
+                {% else %}
+                    <p class="text-muted">No recent leave requests.</p>
+                {% endif %}
+            </div>
+        </div>
+         <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-hand-holding-medical me-2"></i>My Benefits</h5>
+                <a href="{{ url_for('benefits.view_benefits') }}" class="btn btn-sm btn-outline-secondary py-0">View All</a>
+            </div>
+            <div class="card-body">
+                 {% if active_benefits %}
+                    <ul class="list-group list-group-flush">
+                    {% for benefit in active_benefits %}
+                        <li class="list-group-item px-0">{{ benefit.benefit_type | title }} {% if benefit.details %}- {{ benefit.details }}{% endif %}</li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No active benefits assigned.</p>
+                {% endif %}
+            </div>
+        </div>
+
+
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-bullhorn me-2"></i>Recent Announcements</h5>
+                 <a href="{{ url_for('announcements.view_announcements') }}" class="btn btn-sm btn-outline-secondary py-0">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_announcements %}
+                    {% for announcement in recent_announcements %} {# Assuming recent_announcements is recent_announcements_raw from main.py #}
+                        <div class="mb-3 pb-2 {% if not loop.last %}border-bottom{% endif %}">
+                            <h6>{{ announcement.title }}</h6>
+                            <p class="small text-muted mb-1">{{ announcement.content[:100] }}{% if announcement.content|length > 100 %}...{% endif %}</p>
+                                <small class="text-muted fst-italic">Posted: 
+                                    {% if announcement.created_at_utc_str %}
+                                        {{ announcement.created_at_utc_str | localdatetime(format_str='%Y-%m-%d') }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </small>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No recent announcements.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if g.user.role in ['manager', 'admin'] %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>Team Overview</h5>
+                <a href="{{ url_for('attendance.team_attendance') }}" class="btn btn-sm btn-outline-secondary py-0">Team Attendance</a>
+            </div>
+            <div class="card-body">
+                {% if team_members %}
+                    <ul class="list-group list-group-flush">
+                        {% for member in team_members[:5] %} {# Limit to 5 for dashboard view #}
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <strong>{{ member.full_name }}</strong>
+                                <small class="d-block text-muted">{{ member.role | title }} - {{ member.department or 'N/A' }}</small>
+                            </div>
+                            <a href="{{ url_for('onboarding.my_onboarding_tasks', employee_id_override=member.id) }}" class="btn btn-xs btn-outline-info py-0 px-1" title="View {{member.full_name}}'s Onboarding">
+                                <i class="fas fa-user-check"></i>
+                            </a>
+                        </li>
+                        {% endfor %}
+                        {% if team_members|length > 5 %}
+                         <li class="list-group-item text-center px-0 pt-2">
+                            <small><a href="{{ url_for('users.view_users') if g.user.role == 'admin' else url_for('attendance.team_attendance') }}">View all team members...</a></small>
+                         </li>
+                        {% endif %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No team members to display.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-user-clock me-2"></i>Pending Team Leaves</h5>
+                <a href="{{ url_for('leaves.manage_leaves') }}" class="btn btn-sm btn-outline-secondary py-0">Manage All</a>
+            </div>
+            <div class="card-body">
+                {% if pending_team_leaves %}
+                     <ul class="list-group list-group-flush">
+                        {% for leave in pending_team_leaves %}
+                        <li class="list-group-item px-0">
+                            <strong>{{ leave.employee_name }}</strong> ({{ leave.leave_type | title }})
+                            <small class="d-block text-muted">{{ leave.start_date }} to {{ leave.end_date }}</small> {# Date-only #}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No pending team leave requests.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %} {# End manager/admin specific cards #}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+// Script for updating clock status (from dashboard_clock_status_api)
+document.addEventListener('DOMContentLoaded', function() {
+    const clockStatusValue = document.getElementById('clockStatusValue');
+    const clockInTimeDetail = document.getElementById('clockInTimeDetail');
+
+    function updateClockStatusDisplay() {
+        if (!clockStatusValue || !clockInTimeDetail) return; 
+
+        fetch("{{ url_for('main.api_time_clock_status') }}")
+            .then(response => response.json())
+            .then(data => {
+                if (data.is_clocked_in) {
+                    clockStatusValue.textContent = 'Clocked In';
+                    if (data.clock_in_time) { // This is UTC string from API
+                        try {
+                            // Convert UTC string from API to local display for dynamic updates
+                            const clockInUTCStr = data.clock_in_time;
+                            // Add 'Z' to indicate UTC if not already in ISO 8601 format with Z or offset
+                            const clockInDate = new Date(clockInUTCStr.includes('Z') || clockInUTCStr.includes('+') ? clockInUTCStr : clockInUTCStr.replace(' ', 'T') + 'Z');
+                            const now = new Date();
+                            const hours = (now - clockInDate) / (1000 * 60 * 60);
+                            clockInTimeDetail.innerHTML = `Since: ${clockInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (${hours.toFixed(1)}h)`;
+                        } catch (e) {
+                            clockInTimeDetail.textContent = "Since: Error parsing time";
+                             console.error("Error parsing clock_in_time from API:", data.clock_in_time, e);
+                        }
+                    } else {
+                        clockInTimeDetail.textContent = "Since: N/A";
+                    }
+                } else {
+                    clockStatusValue.textContent = 'Clocked Out';
+                    clockInTimeDetail.innerHTML = '&nbsp;';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching clock status:', error);
+                clockStatusValue.textContent = 'Error';
+                clockInTimeDetail.innerHTML = '&nbsp;';
+            });
+    }
+
+    if (clockStatusValue && clockInTimeDetail) { 
+        // Initial update is handled by server-side rendering.
+        // This JS is for dynamic updates if the page stays open.
+        // updateClockStatusDisplay(); // Call once if initial state might be different from SSR
+        setInterval(updateClockStatusDisplay, 30000); 
+    }
+});
+</script>
+{% endblock %}

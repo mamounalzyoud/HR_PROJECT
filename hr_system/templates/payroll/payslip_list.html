@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}My Payslips{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">My Payslips</h1>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Pay Period</th>
+                        <th>Generated At</th>
+                        <th>Net Pay</th>
+                        <th>Currency</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payslip in payslips %}
+                    <tr>
+                        <td>{{ "%02d" | format(payslip['pay_period_month']) }}/{{ payslip['pay_period_year'] }}</td>
+                        <td>
+                            {% if payslip['generated_at_utc_str'] %}
+                                {{ payslip['generated_at_utc_str'] | localdatetime }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ '%.2f' | format(payslip['net_pay']) }}</td>
+                        <td>{{ payslip['currency'] }}</td>
+                        <td>
+                            <a href="{{ url_for('payroll.view_payslip_detail', payslip_id=payslip['id']) }}" class="btn btn-sm btn-outline-primary py-0">
+                                <i class="fas fa-eye me-1"></i> View Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center text-muted">No payslips found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

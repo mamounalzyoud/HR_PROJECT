@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}My Notifications{% endblock %}
+
+{% block head %}
+{{ super() }} {# Include head content from base.html if any #}
+<style>
+    /* You can keep your existing styles or use the ones from the previous example */
+    .notifications-list {
+        list-style-type: none;
+        padding-left: 0;
+    }
+    .notifications-list .list-group-item {
+        border-bottom: 1px solid #eee; /* Lighter border for separation */
+    }
+    .notifications-list .list-group-item:last-child {
+        border-bottom: none;
+    }
+    .notifications-list .list-group-item-light.fw-bold { /* For unread items */
+        background-color: #e9f5fe; 
+        border-left: 4px solid #5dade2;
+    }
+    .notification-message a {
+        color: #0d6efd; /* Bootstrap primary blue for links */
+    }
+    .notification-message a:hover {
+        text-decoration: underline;
+    }
+    .text-muted {
+        font-size: 0.85rem; /* Slightly smaller muted text */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0"><i class="fas fa-bell me-2"></i>My Notifications</h1>
+        <div>
+            <form method="post" action="{{ url_for('notifications_ui.mark_as_read') }}" id="markAllReadForm" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-check-double me-1"></i> Mark All as Read
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0"> {# Remove card body padding if list group handles it #}
+            {% if notifications %}
+                <ul class="list-group list-group-flush notifications-list">
+                    {% for notification in notifications %}
+                    <li class="list-group-item px-3 py-3 {% if not notification.is_read %}list-group-item-light fw-bold{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <p class="mb-1 notification-message">
+                                {% if notification.link_url %}
+                                    <a href="{{ notification.link_url }}" class="text-decoration-none stretched-link">
+                                        {{ notification.message }}
+                                    </a>
+                                {% else %}
+                                    {{ notification.message }}
+                                {% endif %}
+                            </p>
+                            <small class="text-muted flex-shrink-0 ms-3">
+                                {{ notification.created_at | localdatetime(format_str='%Y-%m-%d %I:%M %p') }}
+                            </small>
+                        </div>
+                        {% if notification.related_entity_type %}
+                            <small class="text-muted d-block mt-1">
+                                Type: {{ notification.related_entity_type | replace('_', ' ') | title }}
+                                {% if notification.related_entity_id %} (ID: {{ notification.related_entity_id }}){% endif %}
+                            </small>
+                        {% endif %}
+                        {# Optional: Add individual "Mark as Read" button if needed #}
+                        {# {% if not notification.is_read %}
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-link p-0 mark-single-read-btn" data-notification-id="{{ notification.id }}">Mark as read</button>
+                        </div>
+                        {% endif %} #}
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-center text-muted p-4 mb-0">You have no notifications.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const markAllReadForm = document.getElementById('markAllReadForm');
+    if (markAllReadForm) {
+        markAllReadForm.addEventListener('submit', function(event) {
+            event.preventDefault(); 
+
+            const csrfToken = document.querySelector('input[name="csrf_token"]'); // Example if you add CSRF
+
+            fetch("{{ url_for('notifications_ui.mark_as_read') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // 'X-CSRFToken': csrfToken ? csrfToken.value : '' // Example CSRF
+                },
+                body: JSON.stringify({ ids: null }) // null or empty list for all
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload(); 
+                } else {
+                    // Consider using your flash message system or a more robust notification
+                    alert('Error marking notifications as read: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while marking notifications as read.');
+            });
+        });
+    }
+    // Add logic for individual mark as read buttons if you implement them
+});
+</script>
+{% endblock %}
